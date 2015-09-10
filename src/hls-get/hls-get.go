@@ -35,8 +35,9 @@ import "bytes"
 import "github.com/golang/groupcache/lru"
 import "strings"
 import "github.com/kz26/m3u8"
+import "github.com/gosexy/redis"
 
-const VERSION = "0.9.1"
+const VERSION = "0.9.3"
 
 var USER_AGENT string
 
@@ -229,10 +230,15 @@ func main() {
 
 	duration := flag.Duration("t", time.Duration(0), "Recording duration (0 == infinite)")
 	useLocalTime := flag.Bool("l", false, "Use local time to track duration instead of supplied metadata")
-	deleteOld := flag.Bool("d", false, "Delete old segments.")
+	deleteOld := flag.Bool("r", false, "Remove old segments.")
 	var output string
 	flag.StringVar(&output, "o", "./", "Output path for sync files.")
 	flag.StringVar(&USER_AGENT, "ua", fmt.Sprintf("hls-sync/%v", VERSION), "User-Agent for HTTP Client")
+	var redisHost string
+	flag.StringVar(&redisHost, "h", nil, "Redis server hostname or IP address.")
+	redisPort := flag.Int("p", 6379, "Redis server port number, default is 6379.")
+	redisDb := flag.Int("d", 0, "Redis db number, default 0.")
+	skipExists := flag.Bool("k", false, "Skip exists files.")
 	flag.Parse()
 
 	os.Stderr.Write([]byte(fmt.Sprintf("hls-sync %v - HTTP Live Streaming (HLS) Synchronizer\n", VERSION)))
@@ -259,4 +265,22 @@ func main() {
 		go getPlaylist(flag.Arg(i), output, *duration, *deleteOld, *useLocalTime, msChan)
 	}
 	downloadSegment(msChan, *duration)
+}
+
+func redis_connect(host string, port int, db int) (client *redis.Client, e error) {
+	client = redis.New()
+
+	e = client.Connect(host, port)
+	if e != nil {
+		return
+	}
+	client.Select(db)
+	return
+}
+
+func redis_get_indicator(c *redis.Client) (result bool) {
+	if c == nil {
+		return false
+	}
+	r, e := c.Get(key)
 }
