@@ -238,7 +238,9 @@ func main() {
 	flag.StringVar(&redisHost, "h", nil, "Redis server hostname or IP address.")
 	redisPort := flag.Int("p", 6379, "Redis server port number, default is 6379.")
 	redisDb := flag.Int("d", 0, "Redis db number, default 0.")
-	skipExists := flag.Bool("k", false, "Skip exists files.")
+	skipExists := flag.Bool("s", false, "Skip exists files.")
+	var redisKey string
+	flag.StringVar(&redisKey, "k", "DOWNLOAD_MOVIES", "The base list key name in redis.")
 	flag.Parse()
 
 	os.Stderr.Write([]byte(fmt.Sprintf("hls-sync %v - HTTP Live Streaming (HLS) Synchronizer\n", VERSION)))
@@ -278,9 +280,27 @@ func redis_connect(host string, port int, db int) (client *redis.Client, e error
 	return
 }
 
-func redis_get_indicator(c *redis.Client) (result bool) {
+func redis_get_indicator(c *redis.Client, k string) (result bool) {
 	if c == nil {
 		return false
 	}
 	r, e := c.Get(key)
+}
+
+func redis_get_link(c *redis.Client, k string) (link string, err error) {
+	if c == nil or k == nil{
+		err = error("Client or key can not be nil.")
+		return
+	}
+
+}
+
+func redis_set_finished(c *redis.Client, k string, link string) (err error){
+	err = nil
+	return
+}
+
+func redis_set_failed(c *redis.Client, k string, link string) (err error){
+	err = nil
+	return
 }

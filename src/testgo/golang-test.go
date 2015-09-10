@@ -5,7 +5,6 @@ import "net/url"
 import "unicode/utf8"
 import "hls/m3u8"
 
-
 func main() {
 	const A = 100
 	u1, _ := url.Parse("http://stb-video.tv-cloud.cn:7070/tvseeHandle/auth.go")
@@ -14,7 +13,7 @@ func main() {
 	fmt.Printf("u1 = %v\n", u1)
 	fmt.Printf("u2 = %v\n", u2)
 
-	list := []string{ "a", "b", "c", "d", "e", "f" }
+	list := []string{"a", "b", "c", "d", "e", "f"}
 	for k, v := range list {
 		fmt.Printf("list[%v] = %v \n", k, v)
 	}
@@ -23,7 +22,7 @@ func main() {
 		fmt.Printf("%v: %c \n", p, c)
 	}
 
-	arr := []int{0,1,2,3,4,5,6,7,8,9}
+	arr := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
 	s1 := arr[2:4]
 	s2 := arr[5:8]
 
@@ -31,26 +30,26 @@ func main() {
 	fmt.Printf("s1: len=%d, cap=%d \n", len(s1), cap(s1))
 	fmt.Printf("s2: len=%d, cap=%d \n", len(s2), cap(s2))
 
-	for i := 0; i<10; i++ {
+	for i := 0; i < 10; i++ {
 		fmt.Printf("%d\t", i)
 	}
 	fmt.Printf("\n")
 
 	k := 0
-	GOGOGO:
+GOGOGO:
 	fmt.Printf("%d\t", k)
 	k++
-	if k<10 {
+	if k < 10 {
 		goto GOGOGO
 	}
 	fmt.Printf("\n")
-	for i:=1; i<=100; i++ {
+	for i := 1; i <= 100; i++ {
 		switch {
-		case i%3==0 && i%5==0:
+		case i%3 == 0 && i%5 == 0:
 			fmt.Printf("FizzBuzz")
-		case i%3==0:
+		case i%3 == 0:
 			fmt.Printf("Fizz")
-		case i%5==0:
+		case i%5 == 0:
 			fmt.Printf("Buzz")
 		default:
 			fmt.Printf("%d", i)
@@ -69,8 +68,8 @@ func main() {
 	fmt.Printf("length of s = %d \n", len(s))
 	sl := []rune(s)
 	n := 0
-	for _,c := range sl {
-		if c != ' '{
+	for _, c := range sl {
+		if c != ' ' {
 			n++
 		}
 	}
@@ -81,7 +80,7 @@ func main() {
 
 	ss := "foobar"
 	ssl := []rune(ss)
-	for i:=0;i<len(ss)/2;i++{
+	for i := 0; i < len(ss)/2; i++ {
 		ssl[i], ssl[len(ss)-1-i] = ssl[len(ss)-1-i], ssl[i]
 	}
 	fmt.Printf("New foobar: %s \n", string(ssl))
@@ -95,43 +94,48 @@ func main() {
 
 	defer_test()
 
-	x1 := throwsPanic(func(){
+	x1 := throwsPanic(func() {
 		return
-		})
-	x2 := throwsPanic(func(){
+	})
+	x2 := throwsPanic(func() {
 		panic("Great")
-		})
+	})
 	fmt.Printf("x1=%v, x2=%v \n", x1, x2)
 
-	fmt.Printf("Avg of 1.0, 2.0, 3.0 = %f \n", theavg(1,2,3))
+	fmt.Printf("Avg of 1.0, 2.0, 3.0 = %f \n", theavg(1, 2, 3))
 	var x, y int
-	x, y = ordered(2,5) 
-	fmt.Printf("Ordered(2,5) = %d, %d \n", x,y)
-	x, y = ordered(4,3) 
-	fmt.Printf("Ordered(4,3) = %d, %d \n", x,y)
-	x, y = ordered(6,6) 
-	fmt.Printf("Ordered(6,6) = %d, %d \n", x,y)
+	x, y = ordered(2, 5)
+	fmt.Printf("Ordered(2,5) = %d, %d \n", x, y)
+	x, y = ordered(4, 3)
+	fmt.Printf("Ordered(4,3) = %d, %d \n", x, y)
+	x, y = ordered(6, 6)
+	fmt.Printf("Ordered(6,6) = %d, %d \n", x, y)
 
 	fmt.Printf("Fibonacci(20)=%v\n", Fibonacci(20))
-	fmt.Printf("Maped(1,2,3,4,5,6,7)=%v\n", Map(func (n int) int {
-			return n*2
-		}, []int{1,2,3,4,5,6,7}))
-	fmt.Printf("Max(1,2,3,4,5,6,7,8,9)=%d\n", Max([]int{1,2,3,4,5,6,7,8,9}))
-	fmt.Printf("Min(1,2,3,4,5,6,7,8,9)=%d\n", Min([]int{1,2,3,4,5,6,7,8,9}))
-	fmt.Printf("BubbleSort(3,4,6,7,8,21,452,745,8432,1,2,53)=%v\n", BubbleSort([]int{3,4,6,7,8,21,452,745,8432,1,2,53}))
+	fmt.Printf("Maped(1,2,3,4,5,6,7)=%v\n", Map(func(n int) int {
+		return n * 2
+	}, []int{1, 2, 3, 4, 5, 6, 7}))
+	fmt.Printf("Max(1,2,3,4,5,6,7,8,9)=%d\n", Max([]int{1, 2, 3, 4, 5, 6, 7, 8, 9}))
+	fmt.Printf("Min(1,2,3,4,5,6,7,8,9)=%d\n", Min([]int{1, 2, 3, 4, 5, 6, 7, 8, 9}))
+	fmt.Printf("BubbleSort(3,4,6,7,8,21,452,745,8432,1,2,53)=%v\n", BubbleSort([]int{3, 4, 6, 7, 8, 21, 452, 745, 8432, 1, 2, 53}))
 	m3u8.Decode("This is just a test!")
+
+	nl := make([]int, 10, 100)
+	for _, v := range nl {
+		fmt.Printf("%d ", v)
+	}
+	fmt.Printf("\nlen=%d, cap=%d\n", len(nl), cap(nl))
 }
 
-
 func defer_test() {
-	for i:=0; i<10; i++{
+	for i := 0; i < 10; i++ {
 		defer fmt.Printf("%d\t", i)
 	}
 }
 
 func throwsPanic(f func()) (b bool) {
-	defer func(){
-		if x:= recover(); x != nil {
+	defer func() {
+		if x := recover(); x != nil {
 			b = true
 		}
 	}()
@@ -139,40 +143,40 @@ func throwsPanic(f func()) (b bool) {
 	return
 }
 
-func theavg(arg...float64) (result float64){
+func theavg(arg ...float64) (result float64) {
 	var sum float64
 	for _, v := range arg {
 		sum += v
 	}
-	result = sum/float64(len(arg))
+	result = sum / float64(len(arg))
 	return
 }
 
-func ordered(x, y int) (m , n int){
+func ordered(x, y int) (m, n int) {
 	if x > y {
 		m, n = y, x
-	}else if x < y {
+	} else if x < y {
 		m, n = x, y
-	}else{
+	} else {
 		m, n = x, y
 	}
 	return
 }
 
-func Fibonacci(n int) ([]int) {
+func Fibonacci(n int) []int {
 	if n > 2 {
-		s := Fibonacci(n-1)
+		s := Fibonacci(n - 1)
 		return append(s, s[len(s)-1]+s[len(s)-2])
-	}else if n==2{
-		return []int{1,1}
-	}else if n==1{
+	} else if n == 2 {
+		return []int{1, 1}
+	} else if n == 1 {
 		return []int{1}
-	}else{
+	} else {
 		return []int{}
 	}
 }
 
-func Map(f func (int)(int), s []int) []int {
+func Map(f func(int) int, s []int) []int {
 	result := make([]int, len(s))
 	for i, v := range s {
 		result[i] = f(v)
@@ -182,7 +186,7 @@ func Map(f func (int)(int), s []int) []int {
 
 func Min(s []int) (m int) {
 	m = s[0]
-	for _,v := range s {
+	for _, v := range s {
 		if v < m {
 			m = v
 		}
@@ -192,7 +196,7 @@ func Min(s []int) (m int) {
 
 func Max(s []int) (m int) {
 	m = s[0]
-	for _,v := range s {
+	for _, v := range s {
 		if v > m {
 			m = v
 		}
@@ -200,9 +204,9 @@ func Max(s []int) (m int) {
 	return
 }
 
-func BubbleSort(s []int) []int{
-	for i:=0;i<len(s);i++{
-		for j:=i+1; j<len(s);j++ {
+func BubbleSort(s []int) []int {
+	for i := 0; i < len(s); i++ {
+		for j := i + 1; j < len(s); j++ {
 			if s[i] > s[j] {
 				s[i], s[j] = s[j], s[i]
 			}
