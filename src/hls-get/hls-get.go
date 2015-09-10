@@ -235,7 +235,7 @@ func main() {
 	flag.StringVar(&output, "o", "./", "Output path for sync files.")
 	flag.StringVar(&USER_AGENT, "ua", fmt.Sprintf("hls-sync/%v", VERSION), "User-Agent for HTTP Client")
 	var redisHost string
-	flag.StringVar(&redisHost, "h", nil, "Redis server hostname or IP address.")
+	flag.StringVar(&redisHost, "h", "", "Redis server hostname or IP address.")
 	redisPort := flag.Int("p", 6379, "Redis server port number, default is 6379.")
 	redisDb := flag.Int("d", 0, "Redis db number, default 0.")
 	skipExists := flag.Bool("s", false, "Skip exists files.")
@@ -272,11 +272,11 @@ func main() {
 func redis_connect(host string, port int, db int) (client *redis.Client, e error) {
 	client = redis.New()
 
-	e = client.Connect(host, port)
+	e = client.Connect(host, uint(port))
 	if e != nil {
 		return
 	}
-	client.Select(db)
+	client.Select(int64(db))
 	return
 }
 
@@ -284,15 +284,16 @@ func redis_get_indicator(c *redis.Client, k string) (result bool) {
 	if c == nil {
 		return false
 	}
-	r, e := c.Get(key)
+	r, e := c.Get(k)
+	return false
 }
 
 func redis_get_link(c *redis.Client, k string) (link string, err error) {
-	if c == nil or k == nil{
-		err = error("Client or key can not be nil.")
+	if c == nil {
+		//err = error("Client can not be nil.")
 		return
 	}
-
+	return
 }
 
 func redis_set_finished(c *redis.Client, k string, link string) (err error){
