@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"regexp"
 	"unicode/utf8"
 )
 
@@ -134,8 +135,41 @@ GOGOGO:
 			} else {
 				fmt.Printf("%s not exists!\n", p)
 			}
+			// path := uri2storagepath(p)
+			// fmt.Printf("%s > %s \n", p, path)
 		}
 	}
+
+	// re := regexp.MustCompile("a(x*)b(y|z)c")
+	// fmt.Printf("%q\n", re.FindStringSubmatch("-axxxbyc-"))
+	// fmt.Printf("%q\n", re.FindStringSubmatch("-abzc-"))
+}
+
+func uri2storagepath(uri string) (path string) {
+	//path = uri
+	var p []string
+	re1 := regexp.MustCompile("/vds[0-9]+/data[0-9]*/(.*)")
+	p = re1.FindStringSubmatch(uri)
+	// fmt.Printf("re1: %v", p)
+	if p != nil {
+		path = p[1]
+		return p[1]
+	}
+	re2 := regexp.MustCompile("/vds[0-9]+/export/data/videos_vod/(.*)")
+	p = re2.FindStringSubmatch(uri)
+	fmt.Printf("re2: %v", p)
+	if p != nil {
+		path = p[1]
+		return p[1]
+	}
+	re3 := regexp.MustCompile("/vds[0-9]+/(v.*)")
+	p = re3.FindStringSubmatch(uri)
+	// fmt.Printf("re3: %v", p)
+	if p != nil {
+		path = p[1]
+		return p[1]
+	}
+	return uri
 }
 
 func defer_test() {

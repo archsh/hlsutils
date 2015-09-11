@@ -21,22 +21,25 @@
 
 package main
 
-import "flag"
-import "fmt"
-import "io"
-import "io/ioutil"
-import "net/http"
-import "net/url"
-import "log"
-import "os"
-import "path"
-import "time"
-import "bytes"
-import "strconv"
-import "github.com/golang/groupcache/lru"
-import "strings"
-import "github.com/kz26/m3u8"
-import "github.com/gosexy/redis"
+import (
+	"bytes"
+	"flag"
+	"fmt"
+	"github.com/golang/groupcache/lru"
+	"github.com/gosexy/redis"
+	"github.com/kz26/m3u8"
+	"io"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"net/url"
+	"os"
+	"path"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+)
 
 const VERSION = "0.9.3"
 
@@ -101,15 +104,15 @@ func getsaveSegment(url string, filename string) (string, error) {
 
 func downloadSegment(dlc chan *Download, recTime time.Duration) {
 	for v := range dlc {
-		log.Printf("downloadSegment: %v", v)
-		_, err := getsaveSegment(v.URI, v.Filename)
+		// log.Printf("downloadSegment: %v", v)
+		fname, err := getsaveSegment(v.URI, v.Filename)
 		if err != nil {
 			log.Fatal(err)
 		}
 		if recTime != 0 {
-			log.Printf("Recorded %v of %v\n", v.totalDuration, recTime)
+			log.Printf("Recorded %v of %v into %s\n", v.totalDuration, recTime, fname)
 		} else {
-			log.Printf("Recorded %v\n", v.totalDuration)
+			log.Printf("Recorded %v into %s\n", v.totalDuration, fname)
 		}
 	}
 }
@@ -122,7 +125,7 @@ func deleteOldSegment(filename string) {
 	}
 }
 
-func getPlaylist(urlStr string, outDir string, recTime time.Duration, deleteOld bool, useLocalTime bool, skipExists bool, dlc chan *Download) {
+func getPlaylist(urlStr string, outDir string, recTime time.Duration, deleteOld bool, useLocalTime bool, skipExists int, dlc chan *Download) {
 	startTime := time.Now()
 	var recDuration time.Duration = 0
 	var firstList = true
@@ -166,7 +169,7 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, deleteOld 
 			log.Fatal(err)
 		}
 		buffer := bytes.NewBuffer(respBody)
-		playlistFilename := path.Join(outDir, resp.Request.URL.Path)
+		playlistFilename := path.Join(outDir, uri2storagepath(resp.Request.URL.Path))
 		err = os.MkdirAll(path.Dir(playlistFilename), 0777)
 		if err != nil {
 			log.Fatal(err)
@@ -189,7 +192,7 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, deleteOld 
 						if err != nil {
 							log.Fatal(err)
 						}
-						msFilename = path.Join(path.Dir(playlistFilename), path.Base(msURI))
+						msFilename = path.Join(path.Dir(playlistFilename), uri2storagepath(path.Base(msURI)))
 					} else {
 						msUrl, err := resp.Request.URL.Parse(v.URI)
 						if err != nil {
@@ -200,10 +203,12 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, deleteOld 
 						if err != nil {
 							log.Fatal(err)
 						}
-						msFilename = path.Join(outDir, msUrl.Path)
+						msFilename = path.Join(outDir, uri2storagepath(msUrl.Path))
 					}
 					_, hit := cache.Get(msURI)
-					if !hit && (!skipExists || !exists(msFilename)) {
+					if skipExists != 0 && exists(msFilename) {
+						log.Printf("Segment [%s] exists!", msFilename)
+					} else if !hit {
 						cache.Add(msURI, msFilename)
 						if useLocalTime {
 							recDuration = time.Now().Sub(startTime)
@@ -240,21 +245,65 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, deleteOld 
 	}
 }
 
+func uri2storagepath(uri string) (path string) {
+	//path = uri
+	var p []string
+	re1 := regexp.MustCompile("/vds[0-9]+/data[0-9]*/(.*)")
+	p = re1.FindStringSubmatch(uri)
+	// fmt.Printf("re1: %v", p)
+	if p != nil {
+		path = p[1]
+		return p[1]
+	}
+	re2 := regexp.MustCompile("/vds[0-9]+/export/data/videos_vod/(.*)")
+	p = re2.FindStringSubmatch(uri)
+	fmt.Printf("re2: %v", p)
+	if p != nil {
+		path = p[1]
+		return p[1]
+	}
+	re3 := regexp.MustCompile("/vds[0-9]+/(v.*)")
+	p = re3.FindStringSubmatch(uri)
+	// fmt.Printf("re3: %v", p)
+	if p != nil {
+		path = p[1]
+		return p[1]
+	}
+	return uri
+}
+
+func downloadMovie(urlStr string, outDir string, recTime time.Duration, deleteOld bool,
+	useLocalTime bool, skipExists int, callbk func(bool)) {
+	// defer func() {
+	// 	if x := recover(); x != nil {
+	// 		callbk(false)
+	// 	} else {
+	// 		callbk(true)
+	// 	}
+	// }()
+	msChan := make(chan *Download, 1024)
+	go getPlaylist(urlStr, outDir, recTime, deleteOld, useLocalTime, skipExists, msChan)
+	downloadSegment(msChan, recTime)
+	if callbk != nil {
+		callbk(true)
+	}
+}
+
 func main() {
 
 	duration := flag.Duration("t", time.Duration(0), "Recording duration (0 == infinite)")
 	useLocalTime := flag.Bool("l", false, "Use local time to track duration instead of supplied metadata")
 	deleteOld := flag.Bool("r", false, "Remove old segments.")
 	var output string
-	flag.StringVar(&output, "o", "./", "Output path for sync files.")
+	flag.StringVar(&output, "O", "./", "Output path for sync files.")
 	flag.StringVar(&USER_AGENT, "ua", fmt.Sprintf("hls-sync/%v", VERSION), "User-Agent for HTTP Client")
 	var redisHost string
-	flag.StringVar(&redisHost, "h", "", "Redis server hostname or IP address.")
-	redisPort := flag.Int("p", 6379, "Redis server port number, default is 6379.")
-	redisDb := flag.Int("d", 0, "Redis db number, default 0.")
-	skipExists := flag.Bool("s", false, "Skip exists files.")
+	flag.StringVar(&redisHost, "H", "", "Redis server hostname or IP address.")
+	redisPort := flag.Int("P", 6379, "Redis server port number, default is 6379.")
+	redisDb := flag.Int("D", 0, "Redis db number, default 0.")
+	skipExists := flag.Int("S", 0, "Skip exists files.")
 	var redisKey string
-	flag.StringVar(&redisKey, "k", "DOWNLOAD_MOVIES", "The base list key name in redis.")
+	flag.StringVar(&redisKey, "K", "DOWNLOAD_MOVIES", "The base list key name in redis.")
 	flag.Parse()
 
 	os.Stderr.Write([]byte(fmt.Sprintf("hls-sync %v - HTTP Live Streaming (HLS) Synchronizer\n", VERSION)))
@@ -292,21 +341,28 @@ func main() {
 				time.Sleep(5 * time.Second)
 				continue
 			}
-			msChan := make(chan *Download, 1024)
-			go getPlaylist(*link, output, *duration, *deleteOld, *useLocalTime, *skipExists, msChan)
-			downloadSegment(msChan, *duration)
-			redis_set_finished(rc, redisKey, *link)
+			downloadMovie(*link, output, *duration, *deleteOld, *useLocalTime, *skipExists, func(res bool) {
+				if res {
+					redis_set_finished(rc, redisKey, link)
+				} else {
+					redis_set_failed(rc, redisKey, link)
+				}
+			})
+			// msChan := make(chan *Download, 1024)
+			// go getPlaylist(*link, output, *duration, *deleteOld, *useLocalTime, *skipExists, msChan)
+			// downloadSegment(msChan, *duration)
 
 		}
 	} else {
-		msChan := make(chan *Download, 1024)
+		// msChan := make(chan *Download, 1024)
 		for i := 0; i < flag.NArg(); i++ {
 			if !strings.HasPrefix(flag.Arg(i), "http") {
 				log.Fatal("Media playlist url must begin with http/https")
 			}
-			go getPlaylist(flag.Arg(i), output, *duration, *deleteOld, *useLocalTime, *skipExists, msChan)
+			downloadMovie(flag.Arg(i), output, *duration, *deleteOld, *useLocalTime, *skipExists, nil)
+			// go getPlaylist(flag.Arg(i), output, *duration, *deleteOld, *useLocalTime, *skipExists, msChan)
 		}
-		downloadSegment(msChan, *duration)
+		// downloadSegment(msChan, *duration)
 	}
 
 }
@@ -345,25 +401,26 @@ func redis_get_link(c *redis.Client, k string) (link *string) {
 		return nil
 	}
 	l, _ := c.LPop(k)
+	// c.LRange(key, start, stop)
 	log.Printf("Get link: %s", l)
 	link = &l
 	return
 }
 
-func redis_set_finished(c *redis.Client, k string, link string) (err error) {
+func redis_set_finished(c *redis.Client, k string, link *string) (err error) {
 	err = nil
 	if c == nil {
 		return
 	}
-	c.LPush(k+"_finished", &link)
+	c.LPush(k+"_finished", *link)
 	return
 }
 
-func redis_set_failed(c *redis.Client, k string, link string) (err error) {
+func redis_set_failed(c *redis.Client, k string, link *string) (err error) {
 	err = nil
 	if c == nil {
 		return
 	}
-	c.LPush(k+"failed", &link)
+	c.LPush(k+"failed", *link)
 	return
 }
