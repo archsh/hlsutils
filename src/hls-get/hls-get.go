@@ -32,6 +32,7 @@ import "os"
 import "path"
 import "time"
 import "bytes"
+import "strconv"
 import "github.com/golang/groupcache/lru"
 import "strings"
 import "github.com/kz26/m3u8"
@@ -43,6 +44,14 @@ var USER_AGENT string
 
 var client = &http.Client{}
 
+func exists(path string) (b bool) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	}
+	return false
+}
+
 func doRequest(c *http.Client, req *http.Request) (*http.Response, error) {
 	req.Header.Set("User-Agent", USER_AGENT)
 	resp, err := c.Do(req)
@@ -53,6 +62,9 @@ type Download struct {
 	URI           string
 	totalDuration time.Duration
 	Filename      string
+	refer         string
+	totalSegments uint
+	index         uint
 }
 
 func getsaveSegment(url string, filename string) (string, error) {
@@ -89,6 +101,7 @@ func getsaveSegment(url string, filename string) (string, error) {
 
 func downloadSegment(dlc chan *Download, recTime time.Duration) {
 	for v := range dlc {
+		log.Printf("downloadSegment: %v", v)
 		_, err := getsaveSegment(v.URI, v.Filename)
 		if err != nil {
 			log.Fatal(err)
@@ -109,7 +122,7 @@ func deleteOldSegment(filename string) {
 	}
 }
 
-func getPlaylist(urlStr string, outDir string, recTime time.Duration, deleteOld bool, useLocalTime bool, dlc chan *Download) {
+func getPlaylist(urlStr string, outDir string, recTime time.Duration, deleteOld bool, useLocalTime bool, skipExists bool, dlc chan *Download) {
 	startTime := time.Now()
 	var recDuration time.Duration = 0
 	var firstList = true
@@ -166,7 +179,8 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, deleteOld 
 		resp.Body.Close()
 		if listType == m3u8.MEDIA {
 			mpl := playlist.(*m3u8.MediaPlaylist)
-			for _, v := range mpl.Segments {
+			segs := len(mpl.Segments)
+			for idx, v := range mpl.Segments {
 				if v != nil {
 					var msURI string
 					var msFilename string
@@ -189,14 +203,14 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, deleteOld 
 						msFilename = path.Join(outDir, msUrl.Path)
 					}
 					_, hit := cache.Get(msURI)
-					if !hit {
+					if !hit && (!skipExists || !exists(msFilename)) {
 						cache.Add(msURI, msFilename)
 						if useLocalTime {
 							recDuration = time.Now().Sub(startTime)
 						} else {
 							recDuration += time.Duration(int64(v.Duration * 1000000000))
 						}
-						dlc <- &Download{msURI, recDuration, msFilename}
+						dlc <- &Download{msURI, recDuration, msFilename, urlStr, uint(segs), uint(idx + 1)}
 					}
 					if recTime != 0 && recDuration != 0 && recDuration >= recTime {
 						close(dlc)
@@ -246,7 +260,7 @@ func main() {
 	os.Stderr.Write([]byte(fmt.Sprintf("hls-sync %v - HTTP Live Streaming (HLS) Synchronizer\n", VERSION)))
 	os.Stderr.Write([]byte("Copyright (C) 2015 Mingcai SHEN. Licensed for use under the GNU GPL version 3.\n"))
 
-	if flag.NArg() < 1 {
+	if redisHost == "" && flag.NArg() < 1 {
 		os.Stderr.Write([]byte("Usage: hls-sync [Options] media-playlist-url output-path\n"))
 		os.Stderr.Write([]byte("Options:\n"))
 		// os.Stderr.Write([]byte("  -l=bool \n"))
@@ -259,14 +273,42 @@ func main() {
 		os.Exit(2)
 	}
 
-	msChan := make(chan *Download, 1024)
-	for i := 0; i < flag.NArg(); i++ {
-		if !strings.HasPrefix(flag.Arg(i), "http") {
-			log.Fatal("Media playlist url must begin with http/https")
+	if redisHost != "" {
+		log.Println("Using redis as task dispatcher...")
+		rc, err := redis_connect(redisHost, *redisPort, *redisDb)
+		if err != nil {
+			log.Fatal("Can not connect to redis server.")
 		}
-		go getPlaylist(flag.Arg(i), output, *duration, *deleteOld, *useLocalTime, msChan)
+		for {
+			indicator := redis_get_indicator(rc, redisKey)
+			if !indicator {
+				log.Println("Indicator not activated!")
+				time.Sleep(10 * time.Second)
+				continue
+			}
+			link := redis_get_link(rc, redisKey)
+			if link == nil || *link == "" {
+				log.Println("No download link!")
+				time.Sleep(5 * time.Second)
+				continue
+			}
+			msChan := make(chan *Download, 1024)
+			go getPlaylist(*link, output, *duration, *deleteOld, *useLocalTime, *skipExists, msChan)
+			downloadSegment(msChan, *duration)
+			redis_set_finished(rc, redisKey, *link)
+
+		}
+	} else {
+		msChan := make(chan *Download, 1024)
+		for i := 0; i < flag.NArg(); i++ {
+			if !strings.HasPrefix(flag.Arg(i), "http") {
+				log.Fatal("Media playlist url must begin with http/https")
+			}
+			go getPlaylist(flag.Arg(i), output, *duration, *deleteOld, *useLocalTime, *skipExists, msChan)
+		}
+		downloadSegment(msChan, *duration)
 	}
-	downloadSegment(msChan, *duration)
+
 }
 
 func redis_connect(host string, port int, db int) (client *redis.Client, e error) {
@@ -284,24 +326,44 @@ func redis_get_indicator(c *redis.Client, k string) (result bool) {
 	if c == nil {
 		return false
 	}
-	r, e := c.Get(k)
+	r, e := c.Get(k + "_indicator")
+	// log.Printf("%s:> %s", k+"_indicator", r)
+	if e != nil {
+		return false
+	}
+	i, e := strconv.Atoi(r)
+	// log.Printf("i=%d, e=%v", i, e)
+	if e == nil && i > 0 {
+		return true
+	}
 	return false
 }
 
-func redis_get_link(c *redis.Client, k string) (link string, err error) {
+func redis_get_link(c *redis.Client, k string) (link *string) {
 	if c == nil {
 		//err = error("Client can not be nil.")
+		return nil
+	}
+	l, _ := c.LPop(k)
+	log.Printf("Get link: %s", l)
+	link = &l
+	return
+}
+
+func redis_set_finished(c *redis.Client, k string, link string) (err error) {
+	err = nil
+	if c == nil {
 		return
 	}
+	c.LPush(k+"_finished", &link)
 	return
 }
 
-func redis_set_finished(c *redis.Client, k string, link string) (err error){
+func redis_set_failed(c *redis.Client, k string, link string) (err error) {
 	err = nil
-	return
-}
-
-func redis_set_failed(c *redis.Client, k string, link string) (err error){
-	err = nil
+	if c == nil {
+		return
+	}
+	c.LPush(k+"failed", &link)
 	return
 }

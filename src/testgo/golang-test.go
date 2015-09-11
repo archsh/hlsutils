@@ -1,9 +1,11 @@
 package main
 
-import "fmt"
-import "net/url"
-import "unicode/utf8"
-import "hls/m3u8"
+import (
+	"fmt"
+	"net/url"
+	"os"
+	"unicode/utf8"
+)
 
 func main() {
 	const A = 100
@@ -118,13 +120,22 @@ GOGOGO:
 	fmt.Printf("Max(1,2,3,4,5,6,7,8,9)=%d\n", Max([]int{1, 2, 3, 4, 5, 6, 7, 8, 9}))
 	fmt.Printf("Min(1,2,3,4,5,6,7,8,9)=%d\n", Min([]int{1, 2, 3, 4, 5, 6, 7, 8, 9}))
 	fmt.Printf("BubbleSort(3,4,6,7,8,21,452,745,8432,1,2,53)=%v\n", BubbleSort([]int{3, 4, 6, 7, 8, 21, 452, 745, 8432, 1, 2, 53}))
-	m3u8.Decode("This is just a test!")
 
 	nl := make([]int, 10, 100)
 	for _, v := range nl {
 		fmt.Printf("%d ", v)
 	}
 	fmt.Printf("\nlen=%d, cap=%d\n", len(nl), cap(nl))
+
+	if len(os.Args) > 1 {
+		for _, p := range os.Args[1:] {
+			if exists(p) {
+				fmt.Printf("%s exists!\n", p)
+			} else {
+				fmt.Printf("%s not exists!\n", p)
+			}
+		}
+	}
 }
 
 func defer_test() {
@@ -213,4 +224,12 @@ func BubbleSort(s []int) []int {
 		}
 	}
 	return s
+}
+
+func exists(path string) (b bool) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	}
+	return false
 }
