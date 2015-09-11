@@ -257,7 +257,7 @@ func uri2storagepath(uri string) (path string) {
 	}
 	re2 := regexp.MustCompile("/vds[0-9]+/export/data/videos_vod/(.*)")
 	p = re2.FindStringSubmatch(uri)
-	fmt.Printf("re2: %v", p)
+	// fmt.Printf("re2: %v", p)
 	if p != nil {
 		path = p[1]
 		return p[1]
