@@ -59,6 +59,11 @@ func getsaveSegment(url string, filename string) (string, error) {
 		log.Fatal(err)
 	}
 
+	err = os.MkdirAll(path.Dir(filename), 0777)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	out, err := os.Create(filename)
 	if err != nil {
 		log.Fatal(err)

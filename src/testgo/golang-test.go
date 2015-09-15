@@ -143,6 +143,27 @@ GOGOGO:
 	// re := regexp.MustCompile("a(x*)b(y|z)c")
 	// fmt.Printf("%q\n", re.FindStringSubmatch("-axxxbyc-"))
 	// fmt.Printf("%q\n", re.FindStringSubmatch("-abzc-"))
+	xiaoming := Person{name: "Xiao Ming", age: 18}
+
+	fmt.Printf("Xiaoming: %v \n", xiaoming)
+
+	xiaoming.Growup(10)
+
+	fmt.Printf("Xiaoming: %v \n", xiaoming)
+
+	xiaohei := Student{Person: Person{name: "Xiao Hei", age: 12}, grade: 6, class: 2}
+	fmt.Printf("Xiaohei: %v \n", xiaohei)
+	xiaohei.Growup(3)
+	fmt.Printf("Xiaohei: %v \n", xiaohei)
+
+	// var xx Person = (Person)xiaohei
+	// xx = (Person)xiaohei
+	// fmt.Printf("XX: %v \n", xx)
+	mycar := FordFocus{"Focus", 4, 5}
+	DumpCar(&mycar)
+	// var pc = &mycar
+	// t := pc.(ICar)
+
 }
 
 func uri2storagepath(uri string) (path string) {
@@ -266,4 +287,49 @@ func exists(path string) (b bool) {
 		return true
 	}
 	return false
+}
+
+type Person struct {
+	name string
+	age  uint
+	int
+}
+
+type Student struct {
+	Person
+	grade uint
+	class uint
+}
+
+func (p *Person) Growup(years uint) {
+	p.age += years
+}
+
+type ICar interface {
+	GetModel() string
+	GetWheels() int
+	GetSeats() int
+}
+
+type FordFocus struct {
+	model  string
+	wheels int
+	seats  int
+}
+
+func (f *FordFocus) GetModel() string {
+	return f.model
+}
+
+func (f *FordFocus) GetWheels() int {
+	return f.wheels
+}
+
+func (f *FordFocus) GetSeats() int {
+	return f.seats
+}
+func DumpCar(c ICar) {
+	t := c.(ICar)
+	fmt.Printf("Model: %s, Wheels: %d, Seats: %d , %v\n",
+		c.GetModel(), c.GetWheels(), c.GetSeats(), t)
 }
