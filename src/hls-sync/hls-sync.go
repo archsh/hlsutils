@@ -228,6 +228,8 @@ func main() {
 	flag.StringVar(&outputDir, "o", ".", "Output path. default is '.'")
 	flag.StringVar(&USER_AGENT, "ua", fmt.Sprintf("hls-sync/%v", VERSION), "User-Agent for HTTP Client")
 	flag.Parse()
+	
+	endChan := make(chan bool)
 
 	os.Stderr.Write([]byte(fmt.Sprintf("hls-sync %v - HTTP Live Streaming (HLS) Synchronizar\n", VERSION)))
 	os.Stderr.Write([]byte("Copyright (C) 2015 Mingcai SHEN. Licensed for use under the GNU GPL version 3.\n"))
@@ -251,8 +253,14 @@ func main() {
 
 	term_c := make(chan os.Signal, 1)
 	signal.Notify(term_c, os.Interrupt)
-	for sig := range term_c {
-		log.Printf("User controled terminated[%v].", sig)
-		os.Exit(0)
+	for {
+		select {
+		case <- term_c:
+			log.Printf("User controled terminated.\n")
+			os.Exit(0)
+		case <- endChan:
+			log.Printf("Sync finished!\n")
+			break
+		}
 	}
 }
