@@ -73,29 +73,29 @@ type Download struct {
 func getsaveSegment(url string, filename string) (string, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("getsaveSegment:1> Create new request failed: %v\n", err)
 	}
 
 	err = os.MkdirAll(path.Dir(filename), 0777)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("getsaveSegment:2> Create path %s failed :%v\n", path.Dir(filename), err)
 	}
 
 	out, err := os.Create(filename)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("getsaveSegment:3> Create file %s failed: %v\n", filename, err)
 	}
 	defer out.Close()
 	resp, err := doRequest(client, req)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("getsaveSegment:4> do request failed: %v\n", err)
 	}
 	if resp.StatusCode != 200 {
 		log.Printf("Received HTTP %v for %v \n", resp.StatusCode, url)
 	}
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("getsaveSegment:5> Copy response body failed: %v\n", err)
 	}
 	resp.Body.Close()
 	log.Printf("Downloaded %v into %v\n", url, filename)
@@ -107,7 +107,7 @@ func downloadSegment(dlc chan *Download, recTime time.Duration) {
 		// log.Printf("downloadSegment: %v", v)
 		fname, err := getsaveSegment(v.URI, v.Filename)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("downloadSegment:> %v \n", err)
 		}
 		if recTime != 0 {
 			log.Printf("Recorded %v of %v into %s\n", v.totalDuration, recTime, fname)
@@ -138,15 +138,15 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, deleteOld 
 	}
 	outPath, err := os.Open(outDir)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("getPlaylist:1> %v \n", err)
 	}
 	defer outPath.Close()
 	fstat, err := outPath.Stat()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("getPlaylist:2> %v \n", err)
 	}
 	if fstat.IsDir() != true {
-		log.Fatal("Output is not a directory!")
+		log.Fatal("getPlaylist:3> Output is not a directory!")
 	}
 
 	//	playlistUrl, err := url.Parse(urlStr)
@@ -157,7 +157,7 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, deleteOld 
 	for {
 		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("getPlaylist:4> %v \n", err)
 		}
 		resp, err := doRequest(client, req)
 		if err != nil {
@@ -166,18 +166,18 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, deleteOld 
 		}
 		respBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("getPlaylist:5> %v \n", err)
 		}
 		buffer := bytes.NewBuffer(respBody)
 		playlistFilename := path.Join(outDir, uri2storagepath(resp.Request.URL.Path))
 		err = os.MkdirAll(path.Dir(playlistFilename), 0777)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("getPlaylist:6> %v \n", err)
 		}
 		playlist, listType, err := m3u8.Decode(*buffer, true)
 		//		m3u8.DecodeFrom(resp.Body, true)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("getPlaylist:7> %v \n", err)
 		}
 		resp.Body.Close()
 		if listType == m3u8.MEDIA {
@@ -190,7 +190,7 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, deleteOld 
 					if strings.HasPrefix(v.URI, "http") {
 						msURI, err = url.QueryUnescape(v.URI)
 						if err != nil {
-							log.Fatal(err)
+							log.Fatalf("getPlaylist:8> %v \n", err)
 						}
 						msFilename = path.Join(path.Dir(playlistFilename), uri2storagepath(path.Base(msURI)))
 					} else {
@@ -201,7 +201,7 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, deleteOld 
 						}
 						msURI, err = url.QueryUnescape(msUrl.String())
 						if err != nil {
-							log.Fatal(err)
+							log.Fatalf("getPlaylist:9> %v \n", err)
 						}
 						msFilename = path.Join(outDir, uri2storagepath(msUrl.Path))
 					}
@@ -225,7 +225,7 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, deleteOld 
 			}
 			out, err := os.Create(playlistFilename)
 			if err != nil {
-				log.Fatal(err)
+				log.Fatalf("getPlaylist:10> %v \n", err)
 			}
 			io.Copy(out, buffer)
 			out.Close()
@@ -240,7 +240,7 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, deleteOld 
 				time.Sleep(time.Duration(int64(mpl.TargetDuration * 1000000000)))
 			}
 		} else {
-			log.Fatal("Not a valid media playlist")
+			log.Fatal("getPlaylist:11> Not a valid media playlist")
 		}
 	}
 }
