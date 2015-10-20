@@ -54,13 +54,13 @@ type Download struct {
 	Filename      string
 }
 
-// type Status struct {
-// 	sourceUri  string
-// 	statusCode uint
-// 	respBody   string
-// 	errMsg     string
-// 	timeStamp  time.Stamp
-// }
+type Status struct {
+	sourceUri  string
+	statusCode uint
+	respBody   string
+	errMsg     string
+	// timeStamp  time.Stamp
+}
 
 func getsaveSegment(url string, filename string) (string, error) {
 	req, err := http.NewRequest("GET", url, nil)
@@ -277,6 +277,17 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, deleteOld 
 	}
 }
 
+
+func update_status(stc chan *Status, stm map[string] *Status){
+
+	for s := range stc {
+		fmt.Println(s.sourceUri)
+		stm[s.sourceUri] = s
+	}
+	
+}
+
+
 func main() {
 
 	duration := flag.Duration("t", time.Duration(0), "Recording duration (0 == infinite)")
@@ -319,6 +330,9 @@ func main() {
 	} else {
 		linkList = flag.Args()
 	}
+	
+	stsChan := make(chan *Status, 64)
+	stsMap  := make(map[string] *Status, 1024) 
 
 	for _, link := range linkList {
 		log.Printf("Start to get link: %s \n", link)
@@ -330,8 +344,11 @@ func main() {
 		go getPlaylist(link, outputDir, *duration, *deleteOld, *useLocalTime, *retryTimes, msChan)
 		go downloadSegment(msChan, *duration)
 	}
+	
+	go update_status(stsChan, stsMap)
 
 	term_c := make(chan os.Signal, 1)
+
 	signal.Notify(term_c, os.Interrupt)
 	for {
 		select {
