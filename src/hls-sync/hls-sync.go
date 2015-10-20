@@ -54,6 +54,14 @@ type Download struct {
 	Filename      string
 }
 
+// type Status struct {
+// 	sourceUri  string
+// 	statusCode uint
+// 	respBody   string
+// 	errMsg     string
+// 	timeStamp  time.Stamp
+// }
+
 func getsaveSegment(url string, filename string) (string, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
