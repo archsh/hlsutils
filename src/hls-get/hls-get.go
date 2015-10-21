@@ -72,24 +72,38 @@ type Download struct {
 }
 
 func getsaveSegment(url string, filename string) (string, error) {
+	var out *os.File
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Printf("getsaveSegment:1> Create new request failed: %v\n", err)
 		return filename, err
 	}
 
-	err = os.MkdirAll(path.Dir(filename), 0777)
-	if err != nil {
-		log.Printf("getsaveSegment:2> Create path %s failed :%v\n", path.Dir(filename), err)
-		return filename, err
-	}
+	if "" != filename {
+		err = os.MkdirAll(path.Dir(filename), 0777)
+		if err != nil {
+			log.Printf("getsaveSegment:2> Create path %s failed :%v\n", path.Dir(filename), err)
+			return filename, err
+		}
 
-	out, err := os.Create(filename)
+		out, err = os.Create(filename)
+	} else {
+		out, err = ioutil.TempFile("./", "__savedTempSegment")
+	}
 	if err != nil {
 		log.Printf("getsaveSegment:3> Create file %s failed: %v\n", filename, err)
 		return filename, err
 	}
-	defer out.Close()
+	defer func() {
+		if "" != filename {
+			out.Close()
+		} else {
+			fname := out.Name()
+			out.Close()
+			os.Remove(fname)
+		}
+	}()
+
 	resp, err := doRequest(client, req)
 	if err != nil {
 		log.Printf("getsaveSegment:4> do request failed: %v\n", err)
@@ -141,6 +155,7 @@ func deleteOldSegment(filename string) {
 
 func getPlaylist(urlStr string, outDir string, recTime time.Duration, retries int, useLocalTime bool, skipExists int, dlc chan *Download) {
 	startTime := time.Now()
+	var playlistFilename string
 	var recDuration time.Duration = 0
 	// var firstList = true
 	var tried = 0
@@ -151,23 +166,21 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, retries in
 			deleteOldSegment(fname)
 		}
 	}
-	outPath, err := os.Open(outDir)
-	if err != nil {
-		log.Fatalf("getPlaylist:1> %v \n", err)
+	log.Printf("URI: %s, output: %s \n", urlStr, outDir)
+	if "" != outDir {
+		outPath, err := os.Open(outDir)
+		if err != nil {
+			log.Fatalf("getPlaylist:1> %v \n", err)
+		}
+		defer outPath.Close()
+		fstat, err := outPath.Stat()
+		if err != nil {
+			log.Fatalf("getPlaylist:2> %v \n", err)
+		}
+		if fstat.IsDir() != true {
+			log.Fatal("getPlaylist:3> Output is not a directory!")
+		}
 	}
-	defer outPath.Close()
-	fstat, err := outPath.Stat()
-	if err != nil {
-		log.Fatalf("getPlaylist:2> %v \n", err)
-	}
-	if fstat.IsDir() != true {
-		log.Fatal("getPlaylist:3> Output is not a directory!")
-	}
-
-	//	playlistUrl, err := url.Parse(urlStr)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
 
 	for {
 		req, err := http.NewRequest("GET", urlStr, nil)
@@ -202,10 +215,12 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, retries in
 			}
 		}
 		buffer := bytes.NewBuffer(respBody)
-		playlistFilename := path.Join(outDir, uri2storagepath(resp.Request.URL.Path))
-		err = os.MkdirAll(path.Dir(playlistFilename), 0777)
-		if err != nil {
-			log.Fatalf("getPlaylist:6> %v \n", err)
+		playlistFilename = path.Join(outDir, uri2storagepath(resp.Request.URL.Path))
+		if "" != outDir {
+			err = os.MkdirAll(path.Dir(playlistFilename), 0777)
+			if err != nil {
+				log.Fatalf("getPlaylist:6> %v \n", err)
+			}
 		}
 		playlist, listType, err := m3u8.Decode(*buffer, true)
 		//		m3u8.DecodeFrom(resp.Body, true)
@@ -266,6 +281,9 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, retries in
 						} else {
 							recDuration += time.Duration(int64(v.Duration * 1000000000))
 						}
+						if "" == outDir {
+							msFilename = ""
+						}
 						dlc <- &Download{msURI, recDuration, msFilename, urlStr, uint(segs), uint(idx + 1), 0}
 					}
 					if recTime != 0 && recDuration != 0 && recDuration >= recTime {
@@ -274,12 +292,15 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, retries in
 					}
 				}
 			}
-			out, err := os.Create(playlistFilename)
-			if err != nil {
-				log.Fatalf("getPlaylist:10> %v \n", err)
+			if "" != outDir {
+				out, err := os.Create(playlistFilename)
+				if err != nil {
+					log.Fatalf("getPlaylist:10> %v \n", err)
+				}
+				defer out.Close()
+				io.Copy(out, buffer)
 			}
-			defer out.Close()
-			io.Copy(out, buffer)
+
 			// if deleteOld && !firstList {
 			// 	cache.RemoveOldest()
 			// }
@@ -354,7 +375,7 @@ func main() {
 	// deleteOld := flag.Bool("r", false, "Remove old segments.")
 	// verbose := flag.Bool("v", false, "Verbose")
 	var output string
-	flag.StringVar(&output, "O", "./", "Output path for sync files.")
+	flag.StringVar(&output, "O", "", "Output path for sync files.")
 	flag.StringVar(&USER_AGENT, "ua", fmt.Sprintf("hls-sync/%v", VERSION), "User-Agent for HTTP Client")
 	var redisHost string
 	flag.StringVar(&redisHost, "H", "", "Redis server hostname or IP address.")
@@ -364,7 +385,7 @@ func main() {
 	var redisKey string
 	flag.StringVar(&redisKey, "K", "DOWNLOAD_MOVIES", "The base list key name in redis.")
 	flag.Parse()
-	// log.
+
 	os.Stderr.Write([]byte(fmt.Sprintf("hls-sync %v - HTTP Live Streaming (HLS) Synchronizer\n", VERSION)))
 	os.Stderr.Write([]byte("Copyright (C) 2015 Mingcai SHEN. Licensed for use under the GNU GPL version 3.\n"))
 
