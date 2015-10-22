@@ -17,6 +17,7 @@ func usage() {
 func process_cache(uri string, cacheRoot string, scanSegments bool, detectOnly bool) {
 	fmt.Printf("process_cache: \n\turi=%s \n\tcacheRoot=%s \n\t scanSegments=%v  detectOnly=%v\n",
 		uri, cacheRoot, scanSegments, detectOnly)
+	fmt.Printf("%s:> %s\n", uri, ngx_md5.Md5sum(uri))
 }
 
 func main() {
@@ -27,7 +28,7 @@ func main() {
 	scanSegments := flag.Bool("s", false, "Scan M3U8 segments from cached URIs.")
 	detectOnly := flag.Bool("d", false, "Detect cache only, do not remove cached files.")
 	flag.Parse()
-	fmt.Printf("Testing: %s \n", ngx_md5.Md5sum("testing"))
+	// fmt.Printf("Testing: %s \n", ngx_md5.Md5sum("testing"))
 
 	if flag.NArg() < 1 && uriList == "" {
 		usage()
