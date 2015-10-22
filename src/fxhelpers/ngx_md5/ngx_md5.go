@@ -280,13 +280,19 @@ package ngx_md5
 // 	return 0;
 // }
 
+// int mdtesting(void){
+// 	return 101;
+// }
+
 import (
 	"C"
+	"fmt"
 	"unsafe"
 )
 
 func Md5sum(input string) (output string) {
 	var result [33]byte
-	C.md5sum(input, len(input), &result)
+	// C.md5sum(input, len(input), &result)
+	fmt.Printf("Md5sum: C.mdtesting() = %d \n", C.mdtesting())
 	return string(result)
 }
