@@ -261,7 +261,7 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, deleteOld 
 				close(dlc)
 				return
 			} else {
-				time.Sleep(time.Duration(int64(mpl.TargetDuration * 1000000000)))
+				time.Sleep(time.Duration(int64((mpl.TargetDuration/2) * 1000000000)))
 			}
 		} else {
 			log.Println("Not a valid media playlist")
@@ -305,7 +305,7 @@ func main() {
 	os.Stderr.Write([]byte("Copyright (C) 2015 Mingcai SHEN. Licensed for use under the GNU GPL version 3.\n"))
 
 	if flag.NArg() < 1 && listFilename == "" {
-		os.Stderr.Write([]byte("Usage: hls-sync [Options] media-playlist-url output-path\n"))
+		os.Stderr.Write([]byte("Usage: hls-sync [Options] media-playlist-url\n"))
 		os.Stderr.Write([]byte("Options:\n"))
 		flag.PrintDefaults()
 		os.Stderr.Write([]byte("\n"))
