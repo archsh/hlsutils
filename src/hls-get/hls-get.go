@@ -325,28 +325,28 @@ func getPlaylist(urlStr string, outDir string, recTime time.Duration, retries in
 
 func uri2storagepath(uri string) (path string) {
 	//path = uri
-	var p []string
-	re1 := regexp.MustCompile("/vds[0-9]+/data[0-9]*/(.*)")
-	p = re1.FindStringSubmatch(uri)
-	// fmt.Printf("re1: %v", p)
-	if p != nil {
-		path = p[1]
-		return p[1]
-	}
-	re2 := regexp.MustCompile("/vds[0-9]+/export/data/videos_vod/(.*)")
-	p = re2.FindStringSubmatch(uri)
-	// fmt.Printf("re2: %v", p)
-	if p != nil {
-		path = p[1]
-		return p[1]
-	}
-	re3 := regexp.MustCompile("/vds[0-9]+/(v.*)")
-	p = re3.FindStringSubmatch(uri)
-	// fmt.Printf("re3: %v", p)
-	if p != nil {
-		path = p[1]
-		return p[1]
-	}
+	// var p []string
+	// re1 := regexp.MustCompile("/vds[0-9]+/data[0-9]*/(.*)")
+	// p = re1.FindStringSubmatch(uri)
+	// // fmt.Printf("re1: %v", p)
+	// if p != nil {
+	// 	path = p[1]
+	// 	return p[1]
+	// }
+	// re2 := regexp.MustCompile("/vds[0-9]+/export/data/videos_vod/(.*)")
+	// p = re2.FindStringSubmatch(uri)
+	// // fmt.Printf("re2: %v", p)
+	// if p != nil {
+	// 	path = p[1]
+	// 	return p[1]
+	// }
+	// re3 := regexp.MustCompile("/vds[0-9]+/(v.*)")
+	// p = re3.FindStringSubmatch(uri)
+	// // fmt.Printf("re3: %v", p)
+	// if p != nil {
+	// 	path = p[1]
+	// 	return p[1]
+	// }
 	return uri
 }
 
@@ -375,8 +375,8 @@ func main() {
 	// deleteOld := flag.Bool("r", false, "Remove old segments.")
 	// verbose := flag.Bool("v", false, "Verbose")
 	var output string
-	flag.StringVar(&output, "O", "", "Output path for sync files.")
-	flag.StringVar(&USER_AGENT, "ua", fmt.Sprintf("hls-sync/%v", VERSION), "User-Agent for HTTP Client")
+	flag.StringVar(&output, "O", "", "Output path for get files.")
+	flag.StringVar(&USER_AGENT, "ua", fmt.Sprintf("hls-get/%v", VERSION), "User-Agent for HTTP Client")
 	var redisHost string
 	flag.StringVar(&redisHost, "H", "", "Redis server hostname or IP address.")
 	redisPort := flag.Int("P", 6379, "Redis server port number, default is 6379.")
@@ -386,11 +386,11 @@ func main() {
 	flag.StringVar(&redisKey, "K", "DOWNLOAD_MOVIES", "The base list key name in redis.")
 	flag.Parse()
 
-	os.Stderr.Write([]byte(fmt.Sprintf("hls-sync %v - HTTP Live Streaming (HLS) Synchronizer\n", VERSION)))
+	os.Stderr.Write([]byte(fmt.Sprintf("hls-get %v - HTTP Live Streaming (HLS) Synchronizer\n", VERSION)))
 	os.Stderr.Write([]byte("Copyright (C) 2015 Mingcai SHEN. Licensed for use under the GNU GPL version 3.\n"))
 
 	if redisHost == "" && flag.NArg() < 1 {
-		os.Stderr.Write([]byte("Usage: hls-sync [Options] media-playlist-url output-path\n"))
+		os.Stderr.Write([]byte("Usage: hls-get [Options] media-playlist-url output-path\n"))
 		os.Stderr.Write([]byte("Options:\n"))
 		// os.Stderr.Write([]byte("  -l=bool \n"))
 		// os.Stderr.Write([]byte("  -t duration\n"))
