@@ -22,7 +22,7 @@ type PlainFormatter struct {
 }
 
 func (self *PlainFormatter) Format(entry *log.Entry) ([]byte, error) {
-	bytes := []byte(fmt.Sprintf("[%s %s] %s", entry.Time, strings.ToUpper(entry.Level.String()), entry.Message))
+	bytes := []byte(fmt.Sprintf("[%s %s] %s\n", entry.Time, strings.ToUpper(entry.Level.String()), entry.Message))
 	return bytes, nil
 }
 

@@ -18,13 +18,15 @@ package main
 
 import (
 	"flag"
-	"strings"
-	"time"
 	"os"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/archsh/hlsutils/helpers/logging"
 )
+
+const VERSION = "0.9.4"
+
+var logging_config = logging.LoggingConfig{Format:logging.DEFAULT_FORMAT, Level:"DEBUG"}
 
 func Usage() {
 	guide := `
@@ -59,7 +61,7 @@ func main() {
 	flag.StringVar(&segment_rewrite, "SR", "", "Rewrite segment name method. Empty means simple copy.")
 	//UA 'user_agent'    - [STRING] UserAgent. Default is 'hls-get' with version num.
 	var user_agent string
-	flag.StringVar(&user_agent, "UA", "hls-get " + VERSION, "UserAgent.")
+	flag.StringVar(&user_agent, "UA", "hls-get v" + VERSION, "UserAgent.")
 	//L  'log'   - [STRING] Logging output file. Default 'stdout'.
 	var log_file string
 	flag.StringVar(&log_file, "L", "", "Logging output file. Default 'stdout'.")
@@ -74,7 +76,13 @@ func main() {
 	flag.StringVar(&mode, "M", "", "Source mode: redis, mysql. Empty means source via command args.")
 	//RD 'redirect'   - [STRING] Redirect server request.
 	var redirect string
-	flag.StringVar(&redirect, "RD", "", "Redirect server request.")
+	flag.StringVar(&redirect, "RR", "", "Redirect server request.")
+	//C  'concurrent' - [INTEGER] Concurrent tasks.
+	var concurrent int
+	flag.IntVar(&concurrent, "C", 5, "Concurrent tasks.")
+	//TO 'timeout'    - [INTEGER] Request timeout in seconds.
+	var timeout int
+	flag.IntVar(&timeout, "TO", 20, "Request timeout in seconds.")
 	//
 	//RH 'redis_host'  - [STRING] Redis host.
 	var redis_host string
@@ -85,6 +93,9 @@ func main() {
 	//RD 'redis_db'    - [INTEGER] Redis db num.
 	var redis_db int
 	flag.IntVar(&redis_db, "RD", 0, "Redis db num.")
+	//RW 'redis_password'  - [STRING] Redis password.
+	var redis_password string
+	flag.StringVar(&redis_password, "RW", "", "Redis password.")
 	//RK 'redis_key'   - [STRING] List key name in redis.
 	var redis_key string
 	flag.StringVar(&redis_key, "RK", "HLSGET_DOWNLOADS", "List key name in redis.")
@@ -115,9 +126,9 @@ func main() {
 	flag.StringVar(&mysql_url, "MU", "", "${mysql_username}:${mysql_password}@${mysql_host}:${mysql_port}/${mysql_db}/${mysql_table}")
 	flag.Parse()
 
-	os.Stderr.Write([]byte(fmt.Sprintf("hls-get %v - HTTP Live Streaming (HLS) Downloader.\n", VERSION)))
+	os.Stderr.Write([]byte(fmt.Sprintf("hls-get v%v - HTTP Live Streaming (HLS) Downloader.\n", VERSION)))
 	os.Stderr.Write([]byte("Copyright (C) 2015 Mingcai SHEN <archsh@gmail.com>. Licensed for use under the GNU GPL version 3.\n"))
-	//Usage()
+
 	logging_config.Filename = log_file
 	if log_file != "" {
 		logging.InitializeLogging(&logging_config, false, logging_config.Level)
@@ -126,58 +137,26 @@ func main() {
 	}
 	path_rewriter := NewPathRewriter(path_rewrite)
 	segment_rewriter := NewSegmentRewriter(segment_rewrite)
+	var dl_interface DL_Interface
 
 	if mode == "mysql" {
 		// Fetch list from MySQL.
+		log.Infoln("Using mysql as task dispatcher...")
+		dl_interface = NewMySQLDl(mysql_host, uint(mysql_port), mysql_db, mysql_table, mysql_username, mysql_password)
 	}else if mode == "redis" {
 		// Fetch list from Redis.
-		log.Println("Using redis as task dispatcher...")
-		rc, err := redis_connect(redis_host, redis_port, redis_db)
-		if err != nil {
-			log.Fatal("Can not connect to redis server.")
-		}
-		for {
-			indicator := redis_get_indicator(rc, redis_key)
-			if !indicator {
-				log.Println("Indicator not activated!")
-				time.Sleep(10 * time.Second)
-				continue
-			}
-			link := redis_get_link(rc, redis_key)
-			if link == nil || *link == "" {
-				log.Println("No download link!")
-				time.Sleep(5 * time.Second)
-				continue
-			}
-			downloadMovie(*link, output, time.Duration(0), retries, false, 0, func(res bool) {
-				if res {
-					redis_set_finished(rc, redis_key, link)
-				} else {
-					redis_set_failed(rc, redis_key, link)
-				}
-			})
-			// msChan := make(chan *Download, 1024)
-			// go getPlaylist(*link, output, *duration, *deleteOld, *useLocalTime, *skipExists, msChan)
-			// downloadSegment(msChan, *duration)
-
-		}
+		log.Infoln("Using redis as task dispatcher...")
+		dl_interface = NewRedisDl(redis_host, uint(redis_port), redis_password, redis_db, redis_key)
 	}else if flag.NArg() > 0 {
 		// Fetch list from Args.
-		for i := 0; i < flag.NArg(); i++ {
-			if !strings.HasPrefix(flag.Arg(i), "http") {
-				log.Fatal("Media playlist url must begin with http/https")
-			}
-			downloadMovie(flag.Arg(i), output, time.Duration(0), retries, false, 0, nil)
-			// go getPlaylist(flag.Arg(i), output, *duration, *deleteOld, *useLocalTime, *skipExists, msChan)
-		}
-		// downloadSegment(msChan, *duration)
+		log.Infoln("Using download list from arguments ...")
+		dl_interface = NewDummyDl(flag.Args())
 	}else{
 		Usage()
 		os.Stderr.Write([]byte("\n"))
 	}
-
-	log.Debugln("path_rewriter:", path_rewriter.RunString("ABCDEFG"))
-	log.Debugln("segment_rewriter:", segment_rewriter.RunString("ABCDEFG"))
-
+	hlsgetter := NewHLSGetter(dl_interface, output, path_rewriter, segment_rewriter, retries, timeout, skip, redirect, concurrent)
+	hlsgetter.SetUA(user_agent)
+	hlsgetter.Run()
 	logging.DeinitializeLogging()
 }

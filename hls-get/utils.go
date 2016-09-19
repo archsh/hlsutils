@@ -21,7 +21,13 @@ import (
 	//"github.com/archsh/hlsutils/helpers/logging"
 	"github.com/rwtodd/sed-go"
 	"strings"
+	"os"
 )
+
+
+type StringRewriter interface {
+	RunString(string) string
+}
 
 
 type PathRewriter struct {
@@ -61,4 +67,12 @@ func (self *SegmentRewriter) RunString(input string) string {
 func NewSegmentRewriter(cmd string) (sr *SegmentRewriter){
 	sr = new(SegmentRewriter)
 	return
+}
+
+func exists(path string) (b bool) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	}
+	return false
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	log "github.com/Sirupsen/logrus"
-	"errors"
 )
 
 type DL_Interface interface {
@@ -23,10 +22,18 @@ func NewDummyDl(links []string) *Dl_Dummy {
 }
 
 func (self *Dl_Dummy) NextLinks(limit int) ([]string, error) {
+	//log.Debugln("Dl_Dummy.NextLinks>", self.cursor, limit, len(self.links))
 	if self.cursor >= len(self.links){
-		return nil, errors.New("Out of index.")
+		return []string{}, nil
 	}else{
-		ret := self.links[self.cursor:self.cursor+limit]
+		var ret []string
+		if self.cursor + limit > len(self.links) {
+			//log.Debugln("Dl_Dummy.NextLinks> P1 ")
+			ret = self.links[self.cursor:]
+		}else{
+			//log.Debugln("Dl_Dummy.NextLinks> P2")
+			ret = self.links[self.cursor:self.cursor+limit]
+		}
 		self.cursor += limit
 		return ret, nil
 	}

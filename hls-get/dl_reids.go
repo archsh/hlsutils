@@ -4,6 +4,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"errors"
 	"github.com/gosexy/redis"
+	"strconv"
 )
 
 type Dl_Redis struct {
@@ -45,4 +46,64 @@ func (self *Dl_Redis) NextLinks(limit int) ([]string, error) {
 
 func (self *Dl_Redis) SubmitResult(link string, dest string, ret_code int, ret_msg string) {
 	log.Infoln("DL >", link, dest, ret_code, ret_msg)
+}
+
+
+
+func redis_connect(host string, port int, db int) (client *redis.Client, e error) {
+	client = redis.New()
+
+	e = client.Connect(host, uint(port))
+	if e != nil {
+		return
+	}
+	client.Select(int64(db))
+	return
+}
+
+func redis_get_indicator(c *redis.Client, k string) (result bool) {
+	if c == nil {
+		return false
+	}
+	r, e := c.Get(k + "_indicator")
+	// log.Printf("%s:> %s", k+"_indicator", r)
+	if e != nil {
+		return false
+	}
+	i, e := strconv.Atoi(r)
+	// log.Printf("i=%d, e=%v", i, e)
+	if e == nil && i > 0 {
+		return true
+	}
+	return false
+}
+
+func redis_get_link(c *redis.Client, k string) (link *string) {
+	if c == nil {
+		//err = error("Client can not be nil.")
+		return nil
+	}
+	l, _ := c.LPop(k)
+	// c.LRange(key, start, stop)
+	log.Printf("Get link: %s", l)
+	link = &l
+	return
+}
+
+func redis_set_finished(c *redis.Client, k string, link *string) (err error) {
+	err = nil
+	if c == nil {
+		return
+	}
+	c.LPush(k+"_finished", *link)
+	return
+}
+
+func redis_set_failed(c *redis.Client, k string, link *string) (err error) {
+	err = nil
+	if c == nil {
+		return
+	}
+	c.LPush(k+"failed", *link)
+	return
 }
