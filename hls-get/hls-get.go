@@ -386,8 +386,8 @@ func main() {
 	flag.StringVar(&redisKey, "K", "DOWNLOAD_MOVIES", "The base list key name in redis.")
 	flag.Parse()
 
-	os.Stderr.Write([]byte(fmt.Sprintf("hls-get %v - HTTP Live Streaming (HLS) Synchronizer\n", VERSION)))
-	os.Stderr.Write([]byte("Copyright (C) 2015 Mingcai SHEN. Licensed for use under the GNU GPL version 3.\n"))
+	os.Stderr.Write([]byte(fmt.Sprintf("hls-get %v - HTTP Live Streaming (HLS) Downloader.\n", VERSION)))
+	os.Stderr.Write([]byte("Copyright (C) 2015 Mingcai SHEN <archsh@gmail.com>. Licensed for use under the GNU GPL version 3.\n"))
 
 	if redisHost == "" && flag.NArg() < 1 {
 		os.Stderr.Write([]byte("Usage: hls-get [Options] media-playlist-url output-path\n"))

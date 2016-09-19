@@ -287,7 +287,6 @@ func update_status(stc chan *Status, stm map[string]*Status) {
 }
 
 func main() {
-
 	duration := flag.Duration("t", time.Duration(0), "Recording duration (0 == infinite)")
 	useLocalTime := flag.Bool("l", false, "Use local time to track duration instead of supplied metadata")
 	deleteOld := flag.Bool("d", false, "Delete old segments.")
@@ -301,8 +300,8 @@ func main() {
 
 	endChan := make(chan bool)
 
-	os.Stderr.Write([]byte(fmt.Sprintf("hls-sync %v - HTTP Live Streaming (HLS) Synchronizar\n", VERSION)))
-	os.Stderr.Write([]byte("Copyright (C) 2015 Mingcai SHEN. Licensed for use under the GNU GPL version 3.\n"))
+	os.Stderr.Write([]byte(fmt.Sprintf("hls-sync %v - A Realtime HTTP Live Streaming (HLS) Synchronizar.\n", VERSION)))
+	os.Stderr.Write([]byte("Copyright (C) 2015 Mingcai SHEN <archsh#gmail.com>. Licensed for use under the GNU GPL version 3.\n"))
 
 	if flag.NArg() < 1 && listFilename == "" {
 		os.Stderr.Write([]byte("Usage: hls-sync [Options] media-playlist-url\n"))
