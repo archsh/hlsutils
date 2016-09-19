@@ -72,6 +72,9 @@ func main() {
 	//M  'mode'  - [STRING] Source mode: redis, mysql. Default empty means source via command args.
 	var mode string
 	flag.StringVar(&mode, "M", "", "Source mode: redis, mysql. Empty means source via command args.")
+	//RD 'redirect'   - [STRING] Redirect server request.
+	var redirect string
+	flag.StringVar(&redirect, "RD", "", "Redirect server request.")
 	//
 	//RH 'redis_host'  - [STRING] Redis host.
 	var redis_host string
