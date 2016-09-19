@@ -6,7 +6,7 @@ type Stack struct {
 }
 
 func New(n int) (s *Stack){
-	s = new Stack
+	s = new(Stack)
 	s.data = make([]int, n)
 	return
 }

@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"fxhelpers/ngx_md5"
+	"github.com/archsh/hlsutils/fxhelpers/ngx_md5"
 	"os"
 )
 
