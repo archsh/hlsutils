@@ -170,6 +170,7 @@ func main() {
 	}else{
 		logging.InitializeLogging(&logging_config, true, logging_config.Level)
 	}
+	defer logging.DeinitializeLogging()
 	path_rewriter := NewPathRewriter(path_rewrite)
 	segment_rewriter := NewSegmentRewriter(segment_rewrite)
 	var dl_interface DL_Interface
@@ -191,9 +192,9 @@ func main() {
 	}else{
 		Usage()
 		os.Stderr.Write([]byte("\n"))
+		return
 	}
 	hlsgetter := NewHLSGetter(dl_interface, output, path_rewriter, segment_rewriter, retries, timeout, skip, redirect, concurrent, total)
 	hlsgetter.SetUA(user_agent)
 	hlsgetter.Run()
-	logging.DeinitializeLogging()
 }
