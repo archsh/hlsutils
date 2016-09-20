@@ -24,7 +24,7 @@ import (
 	"github.com/archsh/hlsutils/helpers/logging"
 )
 
-const VERSION = "0.9.4"
+const VERSION = "0.9.8-dev"
 
 var logging_config = logging.LoggingConfig{Format:logging.DEFAULT_FORMAT, Level:"DEBUG"}
 
