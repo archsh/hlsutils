@@ -1,19 +1,19 @@
-HLS Utils:
+# HLS Utils
 
-hls-get
-========================================================================================================================
-  Scenarios:
-  ----------------------
-    (1) Simple mode: download one or multiple URL without DB support.
-    (2) Redis support: download multiple URL via REDIS LIST.
-    (3) MySQL support: download multiple URL via MySQL DB Table.
+## hls-get
 
-  Usage:
-  -----------------------
+### Scenarios:
+
+   * Simple mode: download one or multiple URL without DB support.
+   * Redis support: download multiple URL via REDIS LIST.
+   * MySQL support: download multiple URL via MySQL DB Table.
+
+### Usage:
+
     hls-get [OPTIONS,...] [URL1,URL2,...]
 
-  Options:
-  -----------------------
+### Options:
+
     -C int
           Concurrent tasks. (default 5)
     -L string
@@ -60,12 +60,16 @@ hls-get
     -UA string
           UserAgent. (default "hls-get v0.9.4")
 
-  Data Structure of MySQL:
-  -----------------------
+### Data Structure of MySQL:
+
   The following Table Structure is for hls-get to download from a MySQL db table.
+  
   `url` field is the source url for downloading,
+  
   `dest` field will be filled with file saved path after downloaded,
+  
   `status` 0 means for download, 1 means downloading, 2 = success, less than 0 means failed.
+  
   `ret_code` and `ret_msg` indicates the download result, 0 and empty message means DONE well.
  
   -- Table structure for hlsget_downloads
@@ -86,9 +90,10 @@ hls-get
   
     INSERT INTO hlsgetdb.hlsget_downloads (url, ret_code) SELECT `guid`, 0 FROM epgdb_vod.publish_movie WHERE `guid` <> "";
 
-  Data Structure of Redis:
-  -----------------------
+### Data Structure of Redis:
+
   Simply push your download list to Redis as a Redis List.
 
-hls-sync
-========================================================================
+
+## hls-sync
+
