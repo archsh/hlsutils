@@ -83,6 +83,9 @@ func main() {
 	//TO 'timeout'    - [INTEGER] Request timeout in seconds.
 	var timeout int
 	flag.IntVar(&timeout, "TO", 20, "Request timeout in seconds.")
+	//TT 'total'      - [INTEGER] Total download links.
+	var total int64
+	flag.Int64Var(&total, "TT", 0, "Total download links.")
 	//
 	//RH 'redis_host'  - [STRING] Redis host.
 	var redis_host string
@@ -100,8 +103,8 @@ func main() {
 	var redis_key string
 	flag.StringVar(&redis_key, "RK", "HLSGET_DOWNLOADS", "List key name in redis.")
 	//RU 'redis_url'   - [STRING] ${redis_host}:${redis_port}/${redis_db}/${redis_key}
-	var redis_url string
-	flag.StringVar(&redis_url, "RU", "", "${redis_host}:${redis_port}/${redis_db}/${redis_key}")
+	//var redis_url string
+	//flag.StringVar(&redis_url, "RU", "", "${redis_host}:${redis_port}/${redis_db}/${redis_key}")
 	//
 	//MH 'mysql_host'  - [STRING] MySQL host.
 	var mysql_host string
@@ -122,9 +125,41 @@ func main() {
 	var mysql_table string
 	flag.StringVar(&mysql_table, "MT", "hlsget_downloads", "MySQL table.")
 	//MU 'mysql_url'      - [STRING] ${mysql_username}:${mysql_password}@${mysql_host}:${mysql_port}/${mysql_db}/${mysql_table}
-	var mysql_url string
-	flag.StringVar(&mysql_url, "MU", "", "${mysql_username}:${mysql_password}@${mysql_host}:${mysql_port}/${mysql_db}/${mysql_table}")
+	//var mysql_url string
+	//flag.StringVar(&mysql_url, "MU", "", "${mysql_username}:${mysql_password}@${mysql_host}:${mysql_port}/${mysql_db}/${mysql_table}")
+
+
 	flag.Parse()
+
+	var dump_flags = func () {
+		fmt.Println("=================================== Args =================================")
+		fmt.Println(">>", "output:", output)
+		fmt.Println(">>", "path_rewrite:", path_rewrite)
+		fmt.Println(">>", "segment_rewrite:", segment_rewrite)
+		fmt.Println(">>", "user_agent:", user_agent)
+		fmt.Println(">>", "log_file:", log_file)
+		fmt.Println(">>", "retries:", retries)
+		fmt.Println(">>", "skip:", skip)
+		fmt.Println(">>", "mode:", mode)
+		fmt.Println(">>", "redirect:", redirect)
+		fmt.Println(">>", "timeout:", timeout)
+		fmt.Println(">>", "concurrent:", concurrent)
+		fmt.Println(">>", "total:", total)
+		fmt.Println("",)
+		fmt.Println(">>", "redis_host:", redis_host)
+		fmt.Println(">>", "redis_port:", redis_port)
+		fmt.Println(">>", "redis_db:", redis_db)
+		fmt.Println(">>", "redis_password:", redis_password)
+		fmt.Println(">>", "redis_key:", redis_key)
+		fmt.Println("",)
+		fmt.Println(">>", "mysql_host:", mysql_host)
+		fmt.Println(">>", "mysql_port:", mysql_port)
+		fmt.Println(">>", "mysql_username:", mysql_username)
+		fmt.Println(">>", "mysql_password:", mysql_password)
+		fmt.Println(">>", "mysql_db:", mysql_db)
+		fmt.Println(">>", "mysql_table:", mysql_table)
+		fmt.Println("==========================================================================")
+	}
 
 	os.Stderr.Write([]byte(fmt.Sprintf("hls-get v%v - HTTP Live Streaming (HLS) Downloader.\n", VERSION)))
 	os.Stderr.Write([]byte("Copyright (C) 2015 Mingcai SHEN <archsh@gmail.com>. Licensed for use under the GNU GPL version 3.\n"))
@@ -138,6 +173,8 @@ func main() {
 	path_rewriter := NewPathRewriter(path_rewrite)
 	segment_rewriter := NewSegmentRewriter(segment_rewrite)
 	var dl_interface DL_Interface
+
+	dump_flags()
 
 	if mode == "mysql" {
 		// Fetch list from MySQL.
@@ -155,7 +192,7 @@ func main() {
 		Usage()
 		os.Stderr.Write([]byte("\n"))
 	}
-	hlsgetter := NewHLSGetter(dl_interface, output, path_rewriter, segment_rewriter, retries, timeout, skip, redirect, concurrent)
+	hlsgetter := NewHLSGetter(dl_interface, output, path_rewriter, segment_rewriter, retries, timeout, skip, redirect, concurrent, total)
 	hlsgetter.SetUA(user_agent)
 	hlsgetter.Run()
 	logging.DeinitializeLogging()

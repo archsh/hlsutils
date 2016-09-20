@@ -2,10 +2,10 @@ package main
 
 import (
 	log "github.com/Sirupsen/logrus"
-	"errors"
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 	"fmt"
+	"strings"
 )
 
 /*
@@ -21,19 +21,21 @@ The following Table Structure is for hls-get to download from a MySQL db table.
 -- ----------------------------
 DROP TABLE IF EXISTS `hlsget_downloads`;
 CREATE TABLE `hlsget_downloads` (
-`id` int(11) NOT NULL AUTO_INCREMENT,
-`url` varchar(256) NOT NULL DEFAULT '',
-`dest` varchar(256) DEFAULT NULL,
-`ret_code` int(11) DEFAULT '0',
-`ret_msg` varchar(128) DEFAULT NULL,
-PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `url` varchar(256) NOT NULL,
+  `status` int(11) NOT NULL DEFAULT '0',
+  `dest` varchar(256) DEFAULT NULL,
+  `ret_code` int(11) DEFAULT '0',
+  `ret_msg` varchar(128) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `url` (`url`)
+) ENGINE=InnoDB AUTO_INCREMENT=393211 DEFAULT CHARSET=latin1;
 */
 
 /****
  The following script shows load download list from epgdb_vod.pulish_movie:
 
- INSERT INTO hlsgetdb.hlsget_downloads (url, ret_code) SELECT `guid`, -1 FROM epgdb_vod.publish_movie;
+ INSERT INTO hlsgetdb.hlsget_downloads (url, ret_code) SELECT `guid`, 0 FROM epgdb_vod.publish_movie WHERE `guid` <> "";
  */
 
 type Dl_MySQL struct {
@@ -56,9 +58,9 @@ func NewMySQLDl(host string, port uint, db string, table string, username string
 	dl.table = table
 	var dburi string
 	if password != "" {
-		dburi = fmt.Sprintf("%s:%s@%s:%d/%s", username, password, host, port, db)
+		dburi = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s", username, password, host, port, db)
 	}else{
-		dburi = fmt.Sprintf("%s@%s:%d/%s", username, host, port, db)
+		dburi = fmt.Sprintf("%s@tcp(%s:%d)/%s", username, host, port, db)
 	}
 
 	pdb, err := sql.Open("mysql", dburi)
@@ -71,9 +73,50 @@ func NewMySQLDl(host string, port uint, db string, table string, username string
 }
 
 func (self *Dl_MySQL) NextLinks(limit int) ([]string, error) {
-	return nil, errors.New("Not implemented!")
+	sql := "SELECT id, url FROM "+self.table+" WHERE status = 0 LIMIT ?"
+	ret := []string{}
+	ids := []interface{}{}
+	rows, err := self._pdb.Query(sql, limit)
+	if nil != err {
+		log.Errorln("NextLinks[1]:", err)
+		return ret, err
+	}
+	for rows.Next() {
+		var id int
+		var link string
+		e := rows.Scan(&id, &link)
+		if nil != e {
+			log.Errorln("NextLinks[2]:", e)
+			break;
+		}
+		ret = append(ret, link)
+		ids = append(ids, id)
+	}
+	if len(ids) > 0 {
+		sql = "UPDATE "+self.table+" SET status=? WHERE id IN (?" + strings.Repeat(",?", len(ids)-1) + ")"
+		args := []interface{}{1}
+		//for _, i := range ids {
+		//	args = append(args, i)
+		//}
+		args = append(args, ids...)
+		_, e := self._pdb.Exec(sql, args...)
+		if e!= nil {
+			log.Errorln("NextLinks[3]:", e)
+		}
+	}
+	return ret, nil
+	//return nil, errors.New("Not implemented!")
 }
 
 func (self *Dl_MySQL) SubmitResult(link string, dest string, ret_code int, ret_msg string) {
 	log.Infoln("DL >", link, dest, ret_code, ret_msg)
+	status := 2
+	if ret_code != 0 {
+		status = -1
+	}
+	_, e := self._pdb.Exec("UPDATE "+self.table+" SET status=?, dest=?, ret_code=?, ret_msg=?  WHERE url = ?", status,
+	dest, ret_code, ret_msg, link)
+	if e!= nil {
+		log.Errorln("SubmitResult[1]:", e)
+	}
 }

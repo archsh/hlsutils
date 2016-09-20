@@ -2,9 +2,7 @@ package main
 
 import (
 	log "github.com/Sirupsen/logrus"
-	"errors"
 	"github.com/gosexy/redis"
-	"strconv"
 )
 
 type Dl_Redis struct {
@@ -16,6 +14,7 @@ type Dl_Redis struct {
 }
 
 const (
+	SFX_RUNNING = "_RUNNING"
 	SFX_SUCCESS = "_SUCCESS"
 	SFX_FAILED  = "_FAILED"
 )
@@ -41,69 +40,27 @@ func NewRedisDl(host string, port uint, password string, db int, key string) *Dl
 }
 
 func (self *Dl_Redis) NextLinks(limit int) ([]string, error) {
-	return nil, errors.New("Not implemented!")
+	ret := []string{}
+	for i:=0; i< limit; i++ {
+		l, e := self._pdb.LPop(self.key)
+		if nil == e {
+			ret = append(ret, l)
+			self._pdb.HSet(self.key+SFX_RUNNING, l, 1)
+		}else{
+			break
+		}
+	}
+	return ret, nil
 }
 
 func (self *Dl_Redis) SubmitResult(link string, dest string, ret_code int, ret_msg string) {
 	log.Infoln("DL >", link, dest, ret_code, ret_msg)
+	ret := map[string]interface{}{"link":link, "dest": dest, "ret_code": ret_code, "ret_msg": ret_msg}
+	if ret_code != 0 {
+		self._pdb.HSet(self.key+SFX_FAILED, link, ret)
+	}else {
+		self._pdb.HSet(self.key+SFX_SUCCESS, link, ret)
+	}
+	self._pdb.HDel(self.key+SFX_RUNNING, link)
 }
 
-
-
-func redis_connect(host string, port int, db int) (client *redis.Client, e error) {
-	client = redis.New()
-
-	e = client.Connect(host, uint(port))
-	if e != nil {
-		return
-	}
-	client.Select(int64(db))
-	return
-}
-
-func redis_get_indicator(c *redis.Client, k string) (result bool) {
-	if c == nil {
-		return false
-	}
-	r, e := c.Get(k + "_indicator")
-	// log.Printf("%s:> %s", k+"_indicator", r)
-	if e != nil {
-		return false
-	}
-	i, e := strconv.Atoi(r)
-	// log.Printf("i=%d, e=%v", i, e)
-	if e == nil && i > 0 {
-		return true
-	}
-	return false
-}
-
-func redis_get_link(c *redis.Client, k string) (link *string) {
-	if c == nil {
-		//err = error("Client can not be nil.")
-		return nil
-	}
-	l, _ := c.LPop(k)
-	// c.LRange(key, start, stop)
-	log.Printf("Get link: %s", l)
-	link = &l
-	return
-}
-
-func redis_set_finished(c *redis.Client, k string, link *string) (err error) {
-	err = nil
-	if c == nil {
-		return
-	}
-	c.LPush(k+"_finished", *link)
-	return
-}
-
-func redis_set_failed(c *redis.Client, k string, link *string) (err error) {
-	err = nil
-	if c == nil {
-		return
-	}
-	c.LPush(k+"failed", *link)
-	return
-}
