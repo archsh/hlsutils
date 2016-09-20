@@ -40,7 +40,7 @@ func (self *PathRewriter) RunString(input string) string {
 		if nil != e {
 			return input
 		}else{
-			return s
+			return strings.TrimSpace(s)
 		}
 	}else{
 		return input
@@ -48,8 +48,11 @@ func (self *PathRewriter) RunString(input string) string {
 }
 
 func NewPathRewriter(cmd string) (pr *PathRewriter) {
-	engine, err := sed.New(strings.NewReader(cmd))
 	pr = new(PathRewriter)
+	if cmd == "" {
+		return pr
+	}
+	engine, err := sed.New(strings.NewReader(cmd))
 	if nil == err {
 		pr.engine = engine
 	}

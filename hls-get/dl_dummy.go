@@ -2,6 +2,7 @@ package main
 
 import (
 	log "github.com/Sirupsen/logrus"
+	"strings"
 )
 
 type DL_Interface interface {
@@ -17,6 +18,9 @@ type Dl_Dummy struct {
 
 func NewDummyDl(links []string) *Dl_Dummy {
 	dl := new(Dl_Dummy)
+	for _, l := range links {
+		dl.links = append(dl.links, strings.TrimSpace(l))
+	}
 	dl.links = links
 	return dl
 }
