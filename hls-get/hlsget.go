@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"github.com/golang/groupcache/lru"
 	"github.com/kz26/m3u8"
 	"io"
 	"io/ioutil"
@@ -17,11 +16,11 @@ import (
 	"path/filepath"
 	"fmt"
 	"sync"
+	"errors"
 )
 
 type Download struct {
 	URI           string
-	totalDuration time.Duration
 	Filename      string
 	refer         string
 	totalSegments uint
@@ -134,164 +133,116 @@ func (self *HLSGetter) Run() {
 
 func (self *HLSGetter) doRequest(req *http.Request) (*http.Response, error) {
 	req.Header.Set("User-Agent", self._user_agent)
+	req.Header.Add("Accept-Encoding", "identity")
 	resp, err := self._client.Do(req)
 	return resp, err
 }
 
-func (self *HLSGetter) GetSaveSegment(url string, filename string) (string, error) {
+func (self *HLSGetter) GetSegment(url string, filename string, skip_exists bool, retries int) (string, error) {
 	var out *os.File
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		log.Errorf("getsaveSegment:1> Create new request failed: %v\n", err)
-		return filename, err
+	if skip_exists && exists(filename) {
+		log.Infoln("Segment exists: ", filename)
+		return filename, nil
 	}
-
-	if "" != filename {
-		err = os.MkdirAll(filepath.Dir(filename), 0777)
+	if retries < 1 {
+		retries = 1
+	}
+	for i:=0; i< retries; i++ {
+		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
-			log.Errorf("getsaveSegment:2> Create path %s failed :%v\n", filepath.Dir(filename), err)
+			log.Errorf("GetSegment:1> Create new request failed: %v\n", err)
 			return filename, err
 		}
 
-		out, err = os.Create(filename)
-	} else {
-		out, err = ioutil.TempFile("./", "__savedTempSegment")
-	}
-	if err != nil {
-		log.Errorf("getsaveSegment:3> Create file %s failed: %v\n", filename, err)
-		return filename, err
-	}
-	defer func() {
 		if "" != filename {
-			out.Close()
+			err = os.MkdirAll(filepath.Dir(filename), 0777)
+			if err != nil {
+				log.Errorf("GetSegment:2> Create path %s failed :%v\n", filepath.Dir(filename), err)
+				return filename, err
+			}
+			out, err = os.Create(filename)
 		} else {
-			fname := out.Name()
-			out.Close()
-			os.Remove(fname)
+			out, err = ioutil.TempFile("./", "__savedTempSegment")
 		}
-	}()
+		if err != nil {
+			log.Errorf("GetSegment:3> Create file %s failed: %v\n", filename, err)
+			return filename, err
+		}
+		defer func() {
+			if "" != filename {
+				out.Close()
+			} else {
+				fname := out.Name()
+				out.Close()
+				os.Remove(fname)
+			}
+		}()
 
-	resp, err := self.doRequest(req)
-	if err != nil {
-		log.Errorf("getsaveSegment:4> do request failed: %v\n", err)
-		return filename, err
+		resp, err := self.doRequest(req)
+		if err != nil {
+			log.Errorf("GetSegment:4> do request failed: %v\n", err)
+			time.Sleep(time.Duration(1) * time.Second)
+			continue
+		}
+		if resp.StatusCode != 200 {
+			log.Errorf("Received HTTP %v for %v \n", resp.StatusCode, url)
+			time.Sleep(time.Duration(1) * time.Second)
+			continue
+		}
+		_, err = io.Copy(out, resp.Body)
+		if err != nil {
+			log.Errorf("GetSegment:5> Copy response body failed: %v\n", err)
+			time.Sleep(time.Duration(1) * time.Second)
+			continue
+		}
+		resp.Body.Close()
+		log.Debugf("Downloaded %v into %v\n", url, filename)
+		return filename, nil
 	}
-	if resp.StatusCode != 200 {
-		log.Errorf("Received HTTP %v for %v \n", resp.StatusCode, url)
-		return filename, err
-	}
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		log.Errorf("getsaveSegment:5> Copy response body failed: %v\n", err)
-		return filename, err
-	}
-	resp.Body.Close()
-	log.Debugf("Downloaded %v into %v\n", url, filename)
-	return filename, err
+
+	return "", errors.New("Failed to download segment!")
 }
 
-func (self *HLSGetter) GetPlaylist(dlc chan *Download, urlStr string, outDir string, retries int, skip_exists bool) (link string, dest string, ret_code int, ret_msg string){
-	startTime := time.Now()
-	var playlistFilename string
-	var recDuration time.Duration = 0
-	var tried = 0
-	cache := lru.New(1024)
-	link = urlStr
-	log.Debugf("URI: %s, output: %s \n", urlStr, outDir)
-	if "" != outDir {
-		err := os.MkdirAll(outDir, 0755)
-		if nil != err {
-			log.Errorln("Failed to create directory:", err)
-			ret_code = -1
-			ret_msg = fmt.Sprintf("%v", err)
-			return
-		}
-		outPath, err := os.Open(outDir)
-		if err != nil {
-			log.Errorf("GetPlaylist:1> %v \n", err)
-			ret_code = -1
-			ret_msg = fmt.Sprintf("%v", err)
-			return
-		}
-		defer outPath.Close()
-		fstat, err := outPath.Stat()
-		if err != nil {
-			log.Errorf("GetPlaylist:2> %v \n", err)
-			ret_code = -1
-			ret_msg = fmt.Sprintf("%v", err)
-			return
-		}
-		if fstat.IsDir() != true {
-			log.Errorln("GetPlaylist:3> Output is not a directory!")
-			ret_code = -1
-			ret_msg = fmt.Sprintf("'%s' is not a directory!", outDir)
-			return
-		}
+func (self *HLSGetter) GetPlaylist(urlStr string, outDir string, retries int, skip_exists bool) (segments []*Download, dest string, ret_code int, ret_msg string) {
+	if retries < 1 {
+		retries = 1
 	}
-
-	for {
+	for i:=0; i< retries; i++ {
 		if self._redirect_url != "" {
 			urlStr = fmt.Sprintf(self._redirect_url,urlStr)
 		}
+		log.Debugln("GetPlaylist:> Get ", urlStr)
 		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
-			log.Errorf("GetPlaylist:4> %v \n", err)
-			if retries == 0 || (retries > 0 && tried >= retries) {
-				ret_code = -2
-				ret_msg = fmt.Sprintf("Reached maximum retry. [%d]", tried)
-				return
-			} else {
-				tried += 1
-				continue
-			}
+			log.Errorf("GetPlaylist:> Failed to build request: %v \n", err)
+			continue
 		}
 		resp, err := self.doRequest(req)
 		if err != nil {
-			log.Errorln("GetPlaylist:> ", err)
-			time.Sleep(time.Duration(3) * time.Second)
-			if retries == 0 || (retries > 0 && tried >= retries) {
-				ret_code = -2
-				ret_msg = fmt.Sprintf("Reached maximum retry. [%d]", tried)
-				return
-			} else {
-				tried += 1
-				continue
-			}
+			log.Errorln("GetPlaylist:> Request failed:", err)
+			time.Sleep(time.Duration(1) * time.Second)
+			continue
 		}
 		filename := self.PathRewrite(resp.Request.URL.Path)
 		respBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.Errorf("GetPlaylist:5> %v \n", err)
-			if retries == 0 || (retries > 0 && tried >= retries) {
-				ret_code = -2
-				ret_msg = fmt.Sprintf("Reached maximum retry. [%d]", tried)
-				return
-			} else {
-				tried += 1
-				continue
-			}
+			log.Errorf("GetPlaylist:> Read response failed: %v \n", err)
+			time.Sleep(time.Duration(1) * time.Second)
+			continue
 		}
 		buffer := bytes.NewBuffer(respBody)
-		playlistFilename = filepath.Join(outDir, filename)
+		playlistFilename := filepath.Join(outDir, filename)
 		err = os.MkdirAll(filepath.Dir(playlistFilename), 0777)
 		if err != nil {
-			log.Errorf("GetPlaylist:6> %v \n", err)
+			log.Errorf("GetPlaylist:> Create directory '%s' failed: %v \n", filepath.Dir(playlistFilename), err)
 			ret_code = -1
-			ret_msg = fmt.Sprintf("%v", err)
+			ret_msg = fmt.Sprintf("Create directory '%s' failed: %v \n", filepath.Dir(playlistFilename), err)
 			return
 		}
-
 		playlist, listType, err := m3u8.Decode(*buffer, true)
 		if err != nil {
-			log.Errorf("GetPlaylist:7> %v \n", err)
-			if retries == 0 || (retries > 0 && tried >= retries) {
-				ret_code = -3
-				ret_msg = fmt.Sprintf("%v", err)
-				return
-			} else {
-				tried += 1
-				continue
-			}
+			log.Errorf("GetPlaylist:> Decode M3U8 failed: %v \n", err)
+			continue
 		}
 		resp.Body.Close()
 		if listType == m3u8.MEDIA {
@@ -305,65 +256,16 @@ func (self *HLSGetter) GetPlaylist(dlc chan *Download, urlStr string, outDir str
 				var msURI string
 				var msFilename string
 				if strings.HasPrefix(v.URI, "http") {
-					msURI, err = url.QueryUnescape(v.URI)
-					if err != nil {
-						log.Errorf("getPlaylist:8> %v \n", err)
-						if retries == 0 || (retries > 0 && tried >= retries) {
-							ret_code = -3
-							ret_msg = fmt.Sprintf("%v", err)
-							return
-						} else {
-							tried += 1
-							continue
-						}
-					}
+					msURI, _ = url.QueryUnescape(v.URI)
 				} else {
-					msUrl, err := resp.Request.URL.Parse(v.URI)
-					if err != nil {
-						log.Print(err)
-						continue
-					}
-					msURI, err = url.QueryUnescape(msUrl.String())
-					if err != nil {
-						log.Errorf("GetPlaylist:9> %v \n", err)
-						if retries == 0 || (retries > 0 && tried >= retries) {
-							ret_code = -3
-							ret_msg = fmt.Sprintf("%v", err)
-							return
-						} else {
-							tried += 1
-							continue
-						}
-					}
-					//msFilename = filepath.Join(outDir, uri2storagepath(msUrl.Path))
+					msUrl, _ := resp.Request.URL.Parse(v.URI)
+					msURI, _ = url.QueryUnescape(msUrl.String())
 				}
 				segname := self.SegmentRewrite(v.URI,idx)  //fmt.Sprintf("%04d.ts", idx)
 				msFilename = filepath.Join(filepath.Dir(playlistFilename), segname)
 				//mpl.Segments[idx].URI = segname
 				new_mpl.Append(segname, v.Duration, v.Title)
-				//log.Infof("Appended segment[%d]=%s\n", idx, segname)
-				//seg := v
-				//seg.URI = segname
-				//new_mpl.Segments = append(new_mpl.Segments, seg)
-				_, hit := cache.Get(msURI)
-				if skip_exists && exists(msFilename) {
-					log.Debugf("Segment [%s] exists!", msFilename)
-				} else if !hit {
-					cache.Add(msURI, msFilename)
-					if false {
-						recDuration = time.Now().Sub(startTime)
-					} else {
-						recDuration += time.Duration(int64(v.Duration * 1000000000))
-					}
-					if "" == outDir {
-						msFilename = ""
-					}
-					dlc <- &Download{msURI, recDuration, msFilename, urlStr, uint(segs), uint(idx + 1), 0}
-				}
-				//if recTime != 0 && recDuration != 0 && recDuration >= recTime {
-				//	close(dlc)
-				//	return
-				//}
+				segments = append(segments, &Download{msURI, msFilename, urlStr, uint(segs), uint(idx + 1), 0})
 			}
 			log.Debugln("GetPlaylist> Writing playlist to ", playlistFilename, "...")
 			out, err := os.Create(playlistFilename)
@@ -377,62 +279,58 @@ func (self *HLSGetter) GetPlaylist(dlc chan *Download, urlStr string, outDir str
 			new_mpl.Close()
 			buf := new_mpl.Encode()
 			io.Copy(out, buf)
-			if mpl.Closed {
-				close(dlc)
-			} else {
-				time.Sleep(time.Duration(int64(mpl.TargetDuration * 1000000000)))
-			}
-			dest = playlistFilename
-			return
+			//dest = playlistFilename
+			return segments, playlistFilename, 0, ""
 		} else {
 			log.Errorln("GetPlaylist:11> Not a valid media playlist")
-			if retries == 0 || (retries > 0 && tried >= retries) {
-				ret_code = -3
-				ret_msg = fmt.Sprint("Not a valid media playlist.")
-				return
-			} else {
-				tried += 1
-				continue
-			}
+			time.Sleep(time.Duration(1) * time.Second)
 		}
 	}
-
-	return
-}
-
-func (self *HLSGetter) GetSegments(segChan chan *Download, retries int) (int, string) {
-	for v := range segChan {
-		RETRY:
-		log.Infof("downloadSegment: %s \n", v.Filename)
-		_, err := self.GetSaveSegment(v.URI, v.Filename)
-		if err != nil {
-			log.Errorf("downloadSegment:> %v \n", err)
-			if retries < 0 || (retries > 0 && v.retries < retries) {
-				v.retries += 1
-				log.Debugf("downloadSegment:> Retry to download %s in %d times. \n", v.URI, v.retries)
-				time.Sleep(time.Duration(3) * time.Second)
-				goto RETRY
-			}else{
-				return -5, fmt.Sprint(err)
-			}
-		}
-	}
-	return 0, ""
+	return nil, "", -1, "Failed to get playlist."
 }
 
 func (self *HLSGetter) Download(urlStr string, outDir string, callback func(url string, dest string, ret_code int, ret_msg string)){
-	msChan := make(chan *Download, 1024)
-	//recTime := 1 * time.Second
-	var url string
 	var	dest string
 	var	ret_code int
 	var ret_msg string
-	go func (){
-		url, dest, ret_code, ret_msg = self.GetPlaylist(msChan, urlStr, outDir, self._retries, self._skip_exists)
-	}()
-	ret_code, ret_msg = self.GetSegments(msChan, self._retries)
-	if callback != nil {
-		callback(url, dest, ret_code, ret_msg)
+	var segments []*Download
+	failures := 0
+	log.Debugln("Download> ", urlStr, outDir)
+	segments, dest, ret_code, ret_msg = self.GetPlaylist(urlStr, outDir, self._retries, self._skip_exists)
+	if len(segments) < 1 || ret_code != 0 {
+		callback(urlStr, dest, ret_code, ret_msg)
+		return
+	}
+
+	for i:=0; i<len(segments); i+= self._concurrent {
+		var segs []*Download
+		if i+self._concurrent < len(segments) {
+			segs = segments[i:i+self._concurrent]
+		}else{
+			segs = segments[i:]
+		}
+		var wg sync.WaitGroup
+		wg.Add(len(segs))
+		for _, seg := range segs {
+			//log.Debugln(">>> Seg:", seg.URI)
+			go func (ps *Download) {
+				s, e := self.GetSegment(ps.URI, ps.Filename, self._skip_exists, self._retries)
+				if e != nil {
+					failures += 1
+					log.Errorln("Download Segment failed:", ps.URI, e)
+				}else{
+					log.Debugln("Dowloaded >", s)
+				}
+				wg.Done()
+			}(seg)
+		}
+		wg.Wait()
+	}
+
+	if failures > 1 {
+		callback(urlStr, dest, -9, fmt.Sprintf("Failed to download %d segments!", failures))
+	}else{
+		callback(urlStr, dest, 0, "")
 	}
 }
 
