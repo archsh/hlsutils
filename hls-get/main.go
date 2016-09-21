@@ -131,35 +131,35 @@ func main() {
 
 	flag.Parse()
 
-	var dump_flags = func () {
-		fmt.Println("=================================== Args =================================")
-		fmt.Println(">>", "output:", output)
-		fmt.Println(">>", "path_rewrite:", path_rewrite)
-		fmt.Println(">>", "segment_rewrite:", segment_rewrite)
-		fmt.Println(">>", "user_agent:", user_agent)
-		fmt.Println(">>", "log_file:", log_file)
-		fmt.Println(">>", "retries:", retries)
-		fmt.Println(">>", "skip:", skip)
-		fmt.Println(">>", "mode:", mode)
-		fmt.Println(">>", "redirect:", redirect)
-		fmt.Println(">>", "timeout:", timeout)
-		fmt.Println(">>", "concurrent:", concurrent)
-		fmt.Println(">>", "total:", total)
-		fmt.Println("",)
-		fmt.Println(">>", "redis_host:", redis_host)
-		fmt.Println(">>", "redis_port:", redis_port)
-		fmt.Println(">>", "redis_db:", redis_db)
-		fmt.Println(">>", "redis_password:", redis_password)
-		fmt.Println(">>", "redis_key:", redis_key)
-		fmt.Println("",)
-		fmt.Println(">>", "mysql_host:", mysql_host)
-		fmt.Println(">>", "mysql_port:", mysql_port)
-		fmt.Println(">>", "mysql_username:", mysql_username)
-		fmt.Println(">>", "mysql_password:", mysql_password)
-		fmt.Println(">>", "mysql_db:", mysql_db)
-		fmt.Println(">>", "mysql_table:", mysql_table)
-		fmt.Println("==========================================================================")
-	}
+	//var dump_flags = func () {
+	//	fmt.Println("=================================== Args =================================")
+	//	fmt.Println(">>", "output:", output)
+	//	fmt.Println(">>", "path_rewrite:", path_rewrite)
+	//	fmt.Println(">>", "segment_rewrite:", segment_rewrite)
+	//	fmt.Println(">>", "user_agent:", user_agent)
+	//	fmt.Println(">>", "log_file:", log_file)
+	//	fmt.Println(">>", "retries:", retries)
+	//	fmt.Println(">>", "skip:", skip)
+	//	fmt.Println(">>", "mode:", mode)
+	//	fmt.Println(">>", "redirect:", redirect)
+	//	fmt.Println(">>", "timeout:", timeout)
+	//	fmt.Println(">>", "concurrent:", concurrent)
+	//	fmt.Println(">>", "total:", total)
+	//	fmt.Println("",)
+	//	fmt.Println(">>", "redis_host:", redis_host)
+	//	fmt.Println(">>", "redis_port:", redis_port)
+	//	fmt.Println(">>", "redis_db:", redis_db)
+	//	fmt.Println(">>", "redis_password:", redis_password)
+	//	fmt.Println(">>", "redis_key:", redis_key)
+	//	fmt.Println("",)
+	//	fmt.Println(">>", "mysql_host:", mysql_host)
+	//	fmt.Println(">>", "mysql_port:", mysql_port)
+	//	fmt.Println(">>", "mysql_username:", mysql_username)
+	//	fmt.Println(">>", "mysql_password:", mysql_password)
+	//	fmt.Println(">>", "mysql_db:", mysql_db)
+	//	fmt.Println(">>", "mysql_table:", mysql_table)
+	//	fmt.Println("==========================================================================")
+	//}
 
 	os.Stderr.Write([]byte(fmt.Sprintf("hls-get v%v - HTTP Live Streaming (HLS) Downloader.\n", VERSION)))
 	os.Stderr.Write([]byte("Copyright (C) 2015 Mingcai SHEN <archsh@gmail.com>. Licensed for use under the GNU GPL version 3.\n"))
@@ -175,7 +175,7 @@ func main() {
 	segment_rewriter := NewSegmentRewriter(segment_rewrite)
 	var dl_interface DL_Interface
 
-	dump_flags()
+	//dump_flags()
 
 	if mode == "mysql" {
 		// Fetch list from MySQL.
