@@ -14,27 +14,27 @@
 
 ### Options:
 
-- C int
+- `C` int
       Concurrent tasks. (default 5)
-- L string
+- `L` string
       Logging output file. Default 'stdout'.
-- M string
+- `M` string
       Source mode: redis, mysql. Empty means source via command args.
-- MD string
+- `MD` string
       MySQL database. (default "hlsgetdb")
-- MH string
+- `MH` string
       MySQL host. (default "localhost")
-- MN string
+- `MN` string
       MySQL username. (default "root")
-- MP int
+- `MP` int
       MySQL port. (default 3306)
-- MT string
+- `MT` string
       MySQL table. (default "hlsget_downloads")
-- MW string
+- `MW` string
       MySQL password.
-- O string
+- `O` string
       Output directory. (default ".")
-- PR string
+- `PR` string
       Rewrite output path method. Empty means simple copy. 
       The implement of Path Rewrite is powered by 'https://github.com/rwtodd/sed-go', please check the document when using it.
       Normally it's like a sed command, but with differences:
@@ -44,42 +44,42 @@
 |  s/a(bc*)d/$1/g |  s/a\\(bc*\\)d/\1/g | Don't escape (); Use $1, $2, etc. |
 |  s/(?s).//      |  s/.//            | If you want dot to match \n, use (?s) flag.  |
 
-- R int
+- `R` int
       Retry times if download fails.
-- RD int
+- `RD` int
       Redis db num.
-- RH string
+- `RH` string
       Redis host. (default "localhost")
-- RK string
+- `RK` string
       List key name in redis. (default "HLSGET_DOWNLOADS")
-- RP int
+- `RP` int
       Redis port. (default 6379)
-- RR string
+- `RR` string
       Redirect server request.
-- RW string
+- `RW` string
       Redis password.
-- S  bool
+- `S`  bool
       Skip if exists.
-- SR string
+- `SR` string
       Rewrite segment name method. Empty means simple copy.
-- TO int
+- `TO` int
       Request timeout in seconds. (default 20)
-- TT int
+- `TT` int
       Total download links.
-- UA string
+- `UA` string
       UserAgent. (default "hls-get v0.9.4")
 
 ### Data Structure of MySQL:
 
   The following Table Structure is for hls-get to download from a MySQL db table.
   
-  `url` field is the source url for downloading,
+  - `url` field is the source url for downloading,
   
-  `dest` field will be filled with file saved path after downloaded,
+  - `dest` field will be filled with file saved path after downloaded,
   
-  `status` 0 means for download, 1 means downloading, 2 = success, less than 0 means failed.
+  - `status` 0 means for download, 1 means downloading, 2 = success, less than 0 means failed.
   
-  `ret_code` and `ret_msg` indicates the download result, 0 and empty message means DONE well.
+  - `ret_code` and `ret_msg` indicates the download result, 0 and empty message means DONE well.
  
   -- Table structure for hlsget_downloads
   
