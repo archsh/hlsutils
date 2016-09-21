@@ -89,6 +89,7 @@ func (self *HLSGetter) Run() {
 		log.Fatalln("Download List Interface can not be nil!")
 	}
 	var totalDownloaded int64
+	var totalSuccess int64
 	var totalFailed int64
 	totalDownloaded = 0
 	totalFailed = 0
@@ -97,7 +98,13 @@ func (self *HLSGetter) Run() {
 			log.Infoln("Reache total of downloads:", self._total)
 			break;
 		}
-		urls, err := self._dl_intf.NextLinks(self._concurrent)
+		var num int
+		if self._concurrent > int(self._total - totalDownloaded) {
+			num = int(self._total - totalDownloaded)
+		}else{
+			num = self._concurrent
+		}
+		urls, err := self._dl_intf.NextLinks(num)
 		//log.Debugln("length of urls:", len(urls))
 		if nil != err || len(urls)==0 {
 			log.Errorln("Can not get links!", err)
@@ -107,20 +114,20 @@ func (self *HLSGetter) Run() {
 		wg.Add(len(urls))
 		for _, l := range urls {
 			log.Debugln(" Downloading ", l, "...")
-			go func () {
-				self.Download(l, self._output, func (url string, dest string, ret_code int, ret_msg string){
+			go func (lk string) {
+				self.Download(lk, self._output, func (url string, dest string, ret_code int, ret_msg string){
 					if ret_code == 0 {
-						totalDownloaded += 1
+						totalSuccess += 1
 					}else{
 						totalFailed += 1
 					}
+					totalDownloaded += 1
 					self._dl_intf.SubmitResult(url, dest, ret_code, ret_msg)
 				})
 				wg.Done()
-			}()
+			}(l)
 		}
 		wg.Wait()
-		//log.Debugln("length of urls:", len(urls), self._concurrent)
 		if len(urls) < self._concurrent || len(urls) < 1 {
 			log.Infoln("End of download list.")
 			break;
@@ -128,6 +135,7 @@ func (self *HLSGetter) Run() {
 
 	}
 	log.Infoln("Total Downloaded:", totalDownloaded)
+	log.Infoln("Total Success:", totalSuccess)
 	log.Infoln("Total Failed:", totalFailed)
 }
 
