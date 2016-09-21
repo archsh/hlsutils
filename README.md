@@ -14,51 +14,60 @@
 
 ### Options:
 
-    -C int
-          Concurrent tasks. (default 5)
-    -L string
-          Logging output file. Default 'stdout'.
-    -M string
-          Source mode: redis, mysql. Empty means source via command args.
-    -MD string
-          MySQL database. (default "hlsgetdb")
-    -MH string
-          MySQL host. (default "localhost")
-    -MN string
-          MySQL username. (default "root")
-    -MP int
-          MySQL port. (default 3306)
-    -MT string
-          MySQL table. (default "hlsget_downloads")
-    -MW string
-          MySQL password.
-    -O string
-          Output directory. (default ".")
-    -PR string
-          Rewrite output path method. Empty means simple copy.
-    -R int
-          Retry times if download fails.
-    -RD int
-          Redis db num.
-    -RH string
-          Redis host. (default "localhost")
-    -RK string
-          List key name in redis. (default "HLSGET_DOWNLOADS")
-    -RP int
-          Redis port. (default 6379)
-    -RR string
-          Redirect server request.
-    -RW string
-          Redis password.
-    -S    Skip if exists.
-    -SR string
-          Rewrite segment name method. Empty means simple copy.
-    -TO int
-          Request timeout in seconds. (default 20)
-    -TT int
-          Total download links.
-    -UA string
-          UserAgent. (default "hls-get v0.9.4")
+- C int
+      Concurrent tasks. (default 5)
+- L string
+      Logging output file. Default 'stdout'.
+- M string
+      Source mode: redis, mysql. Empty means source via command args.
+- MD string
+      MySQL database. (default "hlsgetdb")
+- MH string
+      MySQL host. (default "localhost")
+- MN string
+      MySQL username. (default "root")
+- MP int
+      MySQL port. (default 3306)
+- MT string
+      MySQL table. (default "hlsget_downloads")
+- MW string
+      MySQL password.
+- O string
+      Output directory. (default ".")
+- PR string
+      Rewrite output path method. Empty means simple copy. 
+      The implement of Path Rewrite is powered by 'https://github.com/rwtodd/sed-go', please check the document when using it.
+      Normally it's like a sed command, but with differences:
+          
+| Go-sed          |  Traditional RE   | Notes                             |
+| --------------- | ----------------- | --------------------------------- |
+|  s/a(bc*)d/$1/g |  s/a\\(bc*\\)d/\1/g | Don't escape (); Use $1, $2, etc. |
+|  s/(?s).//      |  s/.//            | If you want dot to match \n, use (?s) flag.  |
+
+- R int
+      Retry times if download fails.
+- RD int
+      Redis db num.
+- RH string
+      Redis host. (default "localhost")
+- RK string
+      List key name in redis. (default "HLSGET_DOWNLOADS")
+- RP int
+      Redis port. (default 6379)
+- RR string
+      Redirect server request.
+- RW string
+      Redis password.
+- S  bool
+      Skip if exists.
+- SR string
+      Rewrite segment name method. Empty means simple copy.
+- TO int
+      Request timeout in seconds. (default 20)
+- TT int
+      Total download links.
+- UA string
+      UserAgent. (default "hls-get v0.9.4")
 
 ### Data Structure of MySQL:
 
