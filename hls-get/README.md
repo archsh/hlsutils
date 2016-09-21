@@ -101,4 +101,17 @@
 ### Data Structure of Redis:
 
   Simply push your download list to Redis as a Redis List.
+  
+### Example of Using MySQL:
+
+        ./hls-get -O=/data/videos -C 10 -M=mysql -MW=root -TO=10 -TT=100 -S -R=3 -PR='s/\/vds[0-9]+\/data[0-9]+\/(.*)/$1/g' -RR='http://videoha.example.org/redirect?url=%s'
+    
+- `-C 10` Means download 10 links simultaneously
+- `-M=mysql` Using mysql db support
+- `-MW=root` MySQL root password
+- `-TO=10` Timeout in 10 seconds for each request
+- `-TT=100` Totally download 100 links
+- `-S` Skip exists segments
+- `-R=3` Retry 3 times if tailed
+- `-PR='s/\/vds[0-9]+\/data[0-9]+\/(.*)/$1/g' -RR='http://videoha.example.org/redirect?url=%s'` Links needs a redirect server
 
