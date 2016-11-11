@@ -88,17 +88,17 @@ import (
 )
 
 func CRC32(input string) uint32 {
-	return C.hash_crc32(C.CString(input), C.int(len(input)))
+	return uint32(C.hash_crc32(C.CString(input), C.int(len(input))))
 }
 
 func SDBM(input string) uint32 {
-	return C.hash_sdbm(C.CString(input), C.int(len(input)))
+	return uint32(C.hash_sdbm(C.CString(input), C.int(len(input))))
 }
 
 func DJB2(input string) uint32 {
-	return C.hash_djb2(C.CString(input), C.int(len(input)))
+	return uint32(C.hash_djb2(C.CString(input), C.int(len(input))))
 }
 
 func WT6(input string) uint32 {
-	return C.hash_wt6(C.CString(input), C.int(len(input)))
+	return uint32(C.hash_wt6(C.CString(input), C.int(len(input))))
 }
