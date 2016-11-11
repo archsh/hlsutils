@@ -23,17 +23,25 @@ func TestDJB2(t *testing.T) {
 }
 
 func BenchmarkCRC32(b *testing.B) {
-
+	for n := 0; n < b.N; n++ {
+		CRC32("This is a test!")
+	}
 }
 
 func BenchmarkSDBM(b *testing.B) {
-
+	for n := 0; n < b.N; n++ {
+		SDBM("This is a test!")
+	}
 }
 
 func BenchmarkWT6(b *testing.B) {
-
+	for n := 0; n < b.N; n++ {
+		WT6("This is a test!")
+	}
 }
 
 func BenchmarkDJB2(b *testing.B) {
-
+	for n := 0; n < b.N; n++ {
+		DJB2("This is a test!")
+	}
 }
