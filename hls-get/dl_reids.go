@@ -20,6 +20,7 @@ const (
 )
 
 func NewRedisDl(host string, port uint, password string, db int, key string) *Dl_Redis {
+	//log.Debugf("NewRedisDl: host=%s, port=%d, password=%s, db=%d, key=%s \n", host, port, password, db, key)
 	dl := new(Dl_Redis)
 	dl.host = host
 	dl.port = port
@@ -34,7 +35,7 @@ func NewRedisDl(host string, port uint, password string, db int, key string) *Dl
 	if password != "" {
 		dl._pdb.Auth(password)
 	}
-	if db > 1 {
+	if db > 0 {
 		dl._pdb.Select(int64(db))
 	}
 	return dl
