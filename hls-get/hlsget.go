@@ -99,7 +99,7 @@ func (self *HLSGetter) Run() {
 			break;
 		}
 		var num int
-		if self._concurrent > int(self._total - totalDownloaded) {
+		if self._total > 0 && self._concurrent > int(self._total - totalDownloaded) {
 			num = int(self._total - totalDownloaded)
 		}else{
 			num = self._concurrent
@@ -115,7 +115,7 @@ func (self *HLSGetter) Run() {
 		for _, l := range urls {
 			log.Debugln(" Downloading ", l, "...")
 			go func (lk string) {
-				self.Download(lk, self._output, func (url string, dest string, ret_code int, ret_msg string){
+				self.Download(lk, self._output, "", func (url string, dest string, ret_code int, ret_msg string){
 					if ret_code == 0 {
 						totalSuccess += 1
 					}else{
@@ -211,7 +211,7 @@ func (self *HLSGetter) GetSegment(url string, filename string, skip_exists bool,
 	return "", errors.New("Failed to download segment!")
 }
 
-func (self *HLSGetter) GetPlaylist(urlStr string, outDir string, retries int, skip_exists bool) (segments []*Download, dest string, ret_code int, ret_msg string) {
+func (self *HLSGetter) GetPlaylist(urlStr string, outDir string, filename string, retries int, skip_exists bool) (segments []*Download, dest string, ret_code int, ret_msg string) {
 	if retries < 1 {
 		retries = 1
 	}
@@ -231,7 +231,9 @@ func (self *HLSGetter) GetPlaylist(urlStr string, outDir string, retries int, sk
 			time.Sleep(time.Duration(1) * time.Second)
 			continue
 		}
-		filename := self.PathRewrite(resp.Request.URL.Path)
+		if filename == "" {
+			filename = self.PathRewrite(resp.Request.URL.Path)
+		}
 		respBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Errorf("GetPlaylist:> Read response failed: %v \n", err)
@@ -297,14 +299,14 @@ func (self *HLSGetter) GetPlaylist(urlStr string, outDir string, retries int, sk
 	return nil, "", -1, "Failed to get playlist."
 }
 
-func (self *HLSGetter) Download(urlStr string, outDir string, callback func(url string, dest string, ret_code int, ret_msg string)){
+func (self *HLSGetter) Download(urlStr string, outDir string, filename string, callback func(url string, dest string, ret_code int, ret_msg string)){
 	var	dest string
 	var	ret_code int
 	var ret_msg string
 	var segments []*Download
 	failures := 0
 	log.Debugln("Download> ", urlStr, outDir)
-	segments, dest, ret_code, ret_msg = self.GetPlaylist(urlStr, outDir, self._retries, self._skip_exists)
+	segments, dest, ret_code, ret_msg = self.GetPlaylist(urlStr, outDir, filename, self._retries, self._skip_exists)
 	if len(segments) < 1 || ret_code != 0 {
 		callback(urlStr, dest, ret_code, ret_msg)
 		return

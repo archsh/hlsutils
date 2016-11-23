@@ -72,10 +72,10 @@ func NewSegmentRewriter(cmd string) (sr *SegmentRewriter){
 	return
 }
 
-func exists(path string) (b bool) {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true
+func exists(path string) bool {
+	s, err := os.Stat(path)
+	if nil != err || s.Size() < 1 {
+		return false
 	}
-	return false
+	return true
 }
