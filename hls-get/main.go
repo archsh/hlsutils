@@ -65,6 +65,9 @@ func main() {
 	//L  'log'   - [STRING] Logging output file. Default 'stdout'.
 	var log_file string
 	flag.StringVar(&log_file, "L", "", "Logging output file. Default 'stdout'.")
+	//LV 'loglevel' - [STRING] Log level. Default 'INFO'.
+	var log_level string
+	flag.StringVar(&log_level, "LV", "INFO", "Logging level. Default 'INFO'.")
 	//R  'retry' - [INTEGER] Retry times if download fails.
 	var retries int
 	flag.IntVar(&retries, "R", 0, "Retry times if download fails.")
@@ -165,6 +168,7 @@ func main() {
 	os.Stderr.Write([]byte("Copyright (C) 2015 Mingcai SHEN <archsh@gmail.com>. Licensed for use under the GNU GPL version 3.\n"))
 
 	logging_config.Filename = log_file
+	logging_config.Level = log_level
 	if log_file != "" {
 		logging.InitializeLogging(&logging_config, false, logging_config.Level)
 	}else{
