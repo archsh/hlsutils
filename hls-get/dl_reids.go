@@ -28,6 +28,7 @@ func NewRedisDl(host string, port uint, password string, db int, key string) *Dl
 	dl._pdb = redis.New()
 	err := dl._pdb.Connect(host, port)
 	if nil != err {
+		log.Errorln("NewRedisDl: failed >", err)
 		return nil
 	}
 	if password != "" {
@@ -47,6 +48,7 @@ func (self *Dl_Redis) NextLinks(limit int) ([]string, error) {
 			ret = append(ret, l)
 			self._pdb.HSet(self.key+SFX_RUNNING, l, 1)
 		}else{
+			log.Errorln("Dl_Redis.NextLinks> failed:", e)
 			break
 		}
 	}
