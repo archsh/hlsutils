@@ -22,11 +22,47 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"github.com/archsh/hlsutils/helpers/logging"
+	"github.com/BurntSushi/toml"
 )
 
-const VERSION = "0.9.8-dev"
+const VERSION = "0.9.9"
 
 var logging_config = logging.LoggingConfig{Format:logging.DEFAULT_FORMAT, Level:"DEBUG"}
+
+type RedisConfig struct {
+	Host string
+	Port int
+	Db int
+	Password string
+	Key string
+}
+
+type MySQLConfig struct {
+	Host string
+	Port int
+	Username string
+	Password string
+	Db string
+	Table string
+}
+
+type Configuration struct {
+	Output          string
+	Path_Rewrite    string
+	Segment_Rewrite string
+	User_Agent      string
+	Log_File        string
+	Log_Level       string
+	Retries         int
+	Skip            bool
+	Mode            string
+	Redirect        string
+	Concurrent      int
+	Timeout         int
+	Total           int64
+	Redis           RedisConfig
+	MySQL           MySQLConfig
+}
 
 func Usage() {
 	guide := `
@@ -49,7 +85,9 @@ Options:
  *
  */
 func main() {
-
+	//c 'config'    - [STRING] Config file instead of the following parameters. Default empty.
+	var config string
+	flag.StringVar(&config, "c", "", "Use a config file instead of the other parameters. Default empty.")
 	//O  'output'     - [STRING] Output directory. Default '.'.
 	var output string
 	flag.StringVar(&output, "O", ".", "Output directory.")
@@ -127,46 +165,58 @@ func main() {
 	//MT 'mysql_table'    - [STRING] MySQL table.
 	var mysql_table string
 	flag.StringVar(&mysql_table, "MT", "hlsget_downloads", "MySQL table.")
+	var mysql_show_schema bool
+	flag.BoolVar(&mysql_show_schema, "MS", false, "Only show MySQL table schema. Will not do any furthur action if this is set.")
 	//MU 'mysql_url'      - [STRING] ${mysql_username}:${mysql_password}@${mysql_host}:${mysql_port}/${mysql_db}/${mysql_table}
 	//var mysql_url string
 	//flag.StringVar(&mysql_url, "MU", "", "${mysql_username}:${mysql_password}@${mysql_host}:${mysql_port}/${mysql_db}/${mysql_table}")
 
-
 	flag.Parse()
-
-	//var dump_flags = func () {
-	//	fmt.Println("=================================== Args =================================")
-	//	fmt.Println(">>", "output:", output)
-	//	fmt.Println(">>", "path_rewrite:", path_rewrite)
-	//	fmt.Println(">>", "segment_rewrite:", segment_rewrite)
-	//	fmt.Println(">>", "user_agent:", user_agent)
-	//	fmt.Println(">>", "log_file:", log_file)
-	//	fmt.Println(">>", "retries:", retries)
-	//	fmt.Println(">>", "skip:", skip)
-	//	fmt.Println(">>", "mode:", mode)
-	//	fmt.Println(">>", "redirect:", redirect)
-	//	fmt.Println(">>", "timeout:", timeout)
-	//	fmt.Println(">>", "concurrent:", concurrent)
-	//	fmt.Println(">>", "total:", total)
-	//	fmt.Println("",)
-	//	fmt.Println(">>", "redis_host:", redis_host)
-	//	fmt.Println(">>", "redis_port:", redis_port)
-	//	fmt.Println(">>", "redis_db:", redis_db)
-	//	fmt.Println(">>", "redis_password:", redis_password)
-	//	fmt.Println(">>", "redis_key:", redis_key)
-	//	fmt.Println("",)
-	//	fmt.Println(">>", "mysql_host:", mysql_host)
-	//	fmt.Println(">>", "mysql_port:", mysql_port)
-	//	fmt.Println(">>", "mysql_username:", mysql_username)
-	//	fmt.Println(">>", "mysql_password:", mysql_password)
-	//	fmt.Println(">>", "mysql_db:", mysql_db)
-	//	fmt.Println(">>", "mysql_table:", mysql_table)
-	//	fmt.Println("==========================================================================")
-	//}
 
 	os.Stderr.Write([]byte(fmt.Sprintf("hls-get v%v - HTTP Live Streaming (HLS) Downloader.\n", VERSION)))
 	os.Stderr.Write([]byte("Copyright (C) 2015 Mingcai SHEN <archsh@gmail.com>. Licensed for use under the GNU GPL version 3.\n"))
-
+	if mysql_show_schema {
+		ShowMySQLSchema()
+		os.Exit(0)
+	}
+	if config != "" {
+		cfg := new(Configuration)
+		if _, e := toml.DecodeFile(config, cfg); nil != e {
+			os.Stderr.Write([]byte(fmt.Sprintf("Load config<%s> failed: %s.\n", config, e)))
+			os.Exit(1)
+		}else{
+			os.Stderr.Write([]byte(fmt.Sprintf("Loaded config from <%s> .\n", config)))
+			output = cfg.Output
+			path_rewrite = cfg.Path_Rewrite
+			segment_rewrite = cfg.Segment_Rewrite
+			if cfg.User_Agent != "" {
+				user_agent = cfg.User_Agent
+			}
+			log_file = cfg.Log_File
+			if cfg.Log_Level != "" {
+				log_level = cfg.Log_Level
+			}
+			retries = cfg.Retries
+			skip = cfg.Skip
+			mode = cfg.Mode
+			redirect = cfg.Redirect
+			concurrent = cfg.Concurrent
+			timeout = cfg.Timeout
+			total = cfg.Total
+			redis_host = cfg.Redis.Host
+			redis_port = cfg.Redis.Port
+			redis_db = cfg.Redis.Db
+			redis_password = cfg.Redis.Password
+			redis_key = cfg.Redis.Key
+			mysql_host = cfg.MySQL.Host
+			mysql_port = cfg.MySQL.Port
+			mysql_username = cfg.MySQL.Username
+			mysql_password = cfg.MySQL.Password
+			mysql_db = cfg.MySQL.Password
+			mysql_table = cfg.MySQL.Table
+			//os.Stderr.Write([]byte(fmt.Sprintf("Loaded config: %+v .\n", cfg)))
+		}
+	}
 	logging_config.Filename = log_file
 	logging_config.Level = log_level
 	if log_file != "" {
@@ -178,8 +228,6 @@ func main() {
 	path_rewriter := NewPathRewriter(path_rewrite)
 	segment_rewriter := NewSegmentRewriter(segment_rewrite)
 	var dl_interface DL_Interface
-
-	//dump_flags()
 
 	if mode == "mysql" {
 		// Fetch list from MySQL.

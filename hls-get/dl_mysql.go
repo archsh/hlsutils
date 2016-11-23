@@ -6,6 +6,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"fmt"
 	"strings"
+	"os"
 )
 
 /*
@@ -46,6 +47,32 @@ type Dl_MySQL struct {
 	username string
 	password string
 	_pdb *sql.DB
+}
+
+func ShowMySQLSchema() {
+	os.Stderr.Write([]byte("	/*\n"))
+	os.Stderr.Write([]byte("	The following Table Structure is for hls-get to download from a MySQL db table.\n"))
+	os.Stderr.Write([]byte("	`url` field is the source url for downloading,\n"))
+	os.Stderr.Write([]byte("	`dest` field will be filled with file saved path after downloaded,\n"))
+	os.Stderr.Write([]byte("	`ret_code` and `ret_msg` indicates the download result, 0 and empty message means DONE well.\n"))
+	os.Stderr.Write([]byte("	*/\n"))
+	os.Stderr.Write([]byte("\n"))
+	os.Stderr.Write([]byte("	/*\n"))
+	os.Stderr.Write([]byte("	-- ----------------------------\n"))
+	os.Stderr.Write([]byte("	-- Table structure for download_list\n"))
+	os.Stderr.Write([]byte("	-- ----------------------------\n"))
+	os.Stderr.Write([]byte("	DROP TABLE IF EXISTS `hlsget_downloads`;\n"))
+	os.Stderr.Write([]byte("	CREATE TABLE `hlsget_downloads` (\n"))
+	os.Stderr.Write([]byte("	  `id` int(11) NOT NULL AUTO_INCREMENT,\n"))
+	os.Stderr.Write([]byte("	  `url` varchar(256) NOT NULL,\n"))
+	os.Stderr.Write([]byte("	  `status` int(11) NOT NULL DEFAULT '0',\n"))
+	os.Stderr.Write([]byte("	  `dest` varchar(256) DEFAULT NULL,\n"))
+	os.Stderr.Write([]byte("	  `ret_code` int(11) DEFAULT '0',\n"))
+	os.Stderr.Write([]byte("	  `ret_msg` varchar(128) DEFAULT NULL,\n"))
+	os.Stderr.Write([]byte("	  PRIMARY KEY (`id`),\n"))
+	os.Stderr.Write([]byte("	  UNIQUE KEY `url` (`url`)\n"))
+	os.Stderr.Write([]byte("	) ENGINE=InnoDB AUTO_INCREMENT=393211 DEFAULT CHARSET=latin1;\n"))
+	os.Stderr.Write([]byte("	*/\n"))
 }
 
 func NewMySQLDl(host string, port uint, db string, table string, username string, password string) *Dl_MySQL {
