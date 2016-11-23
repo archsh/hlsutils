@@ -12,7 +12,8 @@
     hls-get [OPTIONS,...] [URL1,URL2,...]
 
 ### Options:
-
+- `c` string
+      Use a config file instead of the following parameters. Default empty.
 - `C` int
       Concurrent tasks. (default 5)
 - `L` string
@@ -116,3 +117,48 @@
 - `-PR='s/\/vds[0-9]+\/data[0-9]+\/(.*)/$1/g'` Rewrite output path
 - `-RR='http://videoha.example.org/redirect?url=%s'` Links needs a redirect server
 
+### Configuration example
+
+    ## This is an example of config file for hls-get
+    ## The format of config is TOML (like ini file)
+    # Output string
+    output="./"
+    # PathRewrite string
+    path_rewrite="s/\\/vds[0-9]+\\/data[0-9]+\\/(.*)/$1/g"
+    # SegmentRewrite string
+    segment_rewrite=""
+    # UserAgent string
+    user_agent="HLS-GET"
+    # LogFile string
+    log_file=""
+    # LogLevel string
+    log_level="DEBUG"
+    # Retries int
+    retries=3
+    # Skip bool
+    skip=true
+    # Redirect string
+    redirect="http://videoha.example.org/redirect?url=%s"
+    # Concurrent int
+    concurrent=5
+    # Timeout int
+    timeout=20
+    # Total int64
+    total=0
+    # Mode string
+    mode="mysql"
+    
+    # Redis RedisConfig
+    [redis]
+    host="127.0.0.1"
+    port=6379
+    password=""
+    db=1
+    key="DOWNLOAD_MOVIES"
+    
+    # MySQL MySQLConfig
+    [mysql]
+    host="127.0.0.1"
+    port=3306
+    db="hlsget_db"
+    table="download_movies"
