@@ -113,5 +113,6 @@
 - `-TT=100` Totally download 100 links
 - `-S` Skip exists segments
 - `-R=3` Retry 3 times if tailed
-- `-PR='s/\/vds[0-9]+\/data[0-9]+\/(.*)/$1/g' -RR='http://videoha.example.org/redirect?url=%s'` Links needs a redirect server
+- `-PR='s/\/vds[0-9]+\/data[0-9]+\/(.*)/$1/g'` Rewrite output path
+- `-RR='http://videoha.example.org/redirect?url=%s'` Links needs a redirect server
 
