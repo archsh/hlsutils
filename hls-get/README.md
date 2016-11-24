@@ -1,13 +1,13 @@
-## hls-get
+# hls-get
    A command line tool for downloading M3U8 and segments.
    
-### Scenarios:
+## Scenarios:
 
    * Simple mode: download one or multiple URL without DB support.
    * Redis support: download multiple URL via REDIS LIST.
    * MySQL support: download multiple URL via MySQL DB Table.
 
-### Usage:
+## Usage:
 
     hls-get [OPTIONS,...] [URL1,URL2,...]
 
@@ -67,7 +67,7 @@
 - `TT` int
       Total download links.
 - `UA` string
-      UserAgent. (default "hls-get v0.9.4")
+      UserAgent. (default "hls-get v0.9.10")
 
 ### Data Structure of MySQL:
 
@@ -103,7 +103,7 @@
 
   Simply push your download list to Redis as a Redis List.
   
-### Example of Using MySQL:
+## Example of Using MySQL:
 
         ./hls-get -O=/data/videos -C 10 -M=mysql -MW=root -TO=10 -TT=100 -S -R=3 -PR='s/\/vds[0-9]+\/data[0-9]+\/(.*)/$1/g' -RR='http://videoha.example.org/redirect?url=%s'
     
@@ -117,7 +117,7 @@
 - `-PR='s/\/vds[0-9]+\/data[0-9]+\/(.*)/$1/g'` Rewrite output path
 - `-RR='http://videoha.example.org/redirect?url=%s'` Links needs a redirect server
 
-### Configuration example
+## Configuration example
 
     ## This is an example of config file for hls-get
     ## The format of config is TOML (like ini file)
