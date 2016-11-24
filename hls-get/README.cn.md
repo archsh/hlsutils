@@ -112,15 +112,15 @@ Redis中下载地址列表需要是一个LIST，假设下载列表的KEY为`DOWN
 
         ./hls-get -O=/data/videos -C 10 -M=mysql -MW=root -TO=10 -TT=100 -S -R=3 -PR='s/\/vds[0-9]+\/data[0-9]+\/(.*)/$1/g' -RR='http://videoha.example.org/redirect?url=%s'
     
-- `-C 10` Means download 10 links simultaneously
-- `-M=mysql` Using mysql db support
-- `-MW=root` MySQL root password
-- `-TO=10` Timeout in 10 seconds for each request
-- `-TT=100` Totally download 100 links
-- `-S` Skip exists segments
-- `-R=3` Retry 3 times if tailed
-- `-PR='s/\/vds[0-9]+\/data[0-9]+\/(.*)/$1/g'` Rewrite output path
-- `-RR='http://videoha.example.org/redirect?url=%s'` Links needs a redirect server
+- `-C 10` 10个并发
+- `-M=mysql` 使用MySQL
+- `-MW=root` 密码为“root”
+- `-TO=10` 超时10秒
+- `-TT=100` 一共下载100个链接
+- `-S` 跳过存在的文件
+- `-R=3` 失败重试3次
+- `-PR='s/\/vds[0-9]+\/data[0-9]+\/(.*)/$1/g'` 输出路径重写
+- `-RR='http://videoha.example.org/redirect?url=%s'` 重定向URL， 从数据库取出的每个URL会填充到`%s`然后再发起下载请求
 
 ## 配置文件样例：
 
