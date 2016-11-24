@@ -25,7 +25,7 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-const VERSION = "0.9.10"
+const VERSION = "0.9.11"
 
 var logging_config = logging.LoggingConfig{Format:logging.DEFAULT_FORMAT, Level:"DEBUG"}
 
@@ -228,15 +228,17 @@ func main() {
 	path_rewriter := NewPathRewriter(path_rewrite)
 	segment_rewriter := NewSegmentRewriter(segment_rewrite)
 	var dl_interface DL_Interface
-
+	var loop bool
 	if mode == "mysql" {
 		// Fetch list from MySQL.
 		log.Infoln("Using mysql as task dispatcher...")
 		dl_interface = NewMySQLDl(mysql_host, uint(mysql_port), mysql_db, mysql_table, mysql_username, mysql_password)
+		loop = true
 	}else if mode == "redis" {
 		// Fetch list from Redis.
 		log.Infoln("Using redis as task dispatcher...")
 		dl_interface = NewRedisDl(redis_host, uint(redis_port), redis_password, redis_db, redis_key)
+		loop = true
 	}else if flag.NArg() > 0 {
 		// Fetch list from Args.
 		log.Infoln("Using download list from arguments ...")
@@ -248,5 +250,5 @@ func main() {
 	}
 	hlsgetter := NewHLSGetter(dl_interface, output, path_rewriter, segment_rewriter, retries, timeout, skip, redirect, concurrent, total)
 	hlsgetter.SetUA(user_agent)
-	hlsgetter.Run()
+	hlsgetter.Run(loop)
 }

@@ -81,7 +81,7 @@ func (self *HLSGetter) SegmentRewrite(input string, idx int) string {
 	return input
 }
 
-func (self *HLSGetter) Run() {
+func (self *HLSGetter) Run(loop bool) {
 	if self._concurrent < 1 {
 		log.Fatalln("Concurrent can not less than 1!")
 	}
@@ -108,7 +108,12 @@ func (self *HLSGetter) Run() {
 		//log.Debugln("length of urls:", len(urls))
 		if nil != err || len(urls)==0 {
 			log.Errorln("Can not get links!", err)
-			break;
+			if loop {
+				time.Sleep(time.Second * 5)
+				continue
+			}else{
+				break;
+			}
 		}
 		var wg sync.WaitGroup
 		wg.Add(len(urls))
@@ -265,13 +270,16 @@ func (self *HLSGetter) GetPlaylist(urlStr string, outDir string, filename string
 				}
 				var msURI string
 				var msFilename string
-				if strings.HasPrefix(v.URI, "http") {
+				var segname string
+				if strings.HasPrefix(v.URI, "http://") || strings.HasPrefix(v.URI, "https://") {
 					msURI, _ = url.QueryUnescape(v.URI)
+					segname = fmt.Sprintf("%04d.ts", idx)
 				} else {
 					msUrl, _ := resp.Request.URL.Parse(v.URI)
 					msURI, _ = url.QueryUnescape(msUrl.String())
+					segname = v.URI
 				}
-				segname := self.SegmentRewrite(v.URI,idx)  //fmt.Sprintf("%04d.ts", idx)
+				segname = self.SegmentRewrite(v.URI,idx)  //fmt.Sprintf("%04d.ts", idx)
 				msFilename = filepath.Join(filepath.Dir(playlistFilename), segname)
 				//mpl.Segments[idx].URI = segname
 				new_mpl.Append(segname, v.Duration, v.Title)
