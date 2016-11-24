@@ -2,8 +2,7 @@
 
 all: hls-get hls-sync live-copy ngx-decache
 
-
 hls-get hls-sync live-copy ngx-decache:
-	@echo "Building $@ ..."
-	@go build github.com/archsh/hlsutils/$@
+	@echo "Installing $@ ..."
+	@go install github.com/archsh/hlsutils/$@
 
