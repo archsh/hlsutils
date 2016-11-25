@@ -29,7 +29,7 @@ func NewRedisDl(host string, port uint, password string, db int, key string) *Dl
 	dl.db = db
 	dl.key = key
 	dl._pdb = redis.New()
-	dl._mtx = new(sync.Mutex)
+	dl._mtx = &sync.Mutex{}
 	err := dl._pdb.Connect(host, port)
 	if nil != err {
 		log.Errorln("NewRedisDl: failed >", err)
