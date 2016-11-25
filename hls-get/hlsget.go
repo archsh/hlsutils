@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"github.com/kz26/m3u8"
+	"github.com/grafov/m3u8"
 	"io"
 	"io/ioutil"
 	log "github.com/Sirupsen/logrus"
