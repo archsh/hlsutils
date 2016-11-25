@@ -3,6 +3,7 @@ package main
 import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gosexy/redis"
+	"sync"
 )
 
 type Dl_Redis struct {
@@ -11,6 +12,7 @@ type Dl_Redis struct {
 	db int
 	key string
 	_pdb *redis.Client
+	_mtx  *sync.Mutex
 }
 
 const (
@@ -27,6 +29,7 @@ func NewRedisDl(host string, port uint, password string, db int, key string) *Dl
 	dl.db = db
 	dl.key = key
 	dl._pdb = redis.New()
+	dl._mtx = new(sync.Mutex)
 	err := dl._pdb.Connect(host, port)
 	if nil != err {
 		log.Errorln("NewRedisDl: failed >", err)
@@ -43,6 +46,7 @@ func NewRedisDl(host string, port uint, password string, db int, key string) *Dl
 
 func (self *Dl_Redis) NextLinks(limit int) ([]string, error) {
 	ret := []string{}
+	self._mtx.Lock()
 	for i:=0; i< limit; i++ {
 		l, e := self._pdb.LPop(self.key)
 		if nil == e {
@@ -53,11 +57,13 @@ func (self *Dl_Redis) NextLinks(limit int) ([]string, error) {
 			break
 		}
 	}
+	self._mtx.Unlock()
 	return ret, nil
 }
 
 func (self *Dl_Redis) SubmitResult(link string, dest string, ret_code int, ret_msg string) {
 	log.Infoln("DL >", link, dest, ret_code, ret_msg)
+	self._mtx.Lock()
 	ret := map[string]interface{}{"link":link, "dest": dest, "ret_code": ret_code, "ret_msg": ret_msg}
 	if ret_code != 0 {
 		self._pdb.HSet(self.key+SFX_FAILED, link, ret)
@@ -65,5 +71,6 @@ func (self *Dl_Redis) SubmitResult(link string, dest string, ret_code int, ret_m
 		self._pdb.HSet(self.key+SFX_SUCCESS, link, ret)
 	}
 	self._pdb.HDel(self.key+SFX_RUNNING, link)
+	self._mtx.Unlock()
 }
 

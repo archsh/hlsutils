@@ -25,7 +25,7 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-const VERSION = "0.9.11"
+const VERSION = "0.9.12"
 
 var logging_config = logging.LoggingConfig{Format:logging.DEFAULT_FORMAT, Level:"DEBUG"}
 
