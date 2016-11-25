@@ -18,14 +18,16 @@ package main
 
 import (
 	"github.com/archsh/hlsutils/helpers/logging"
-	log "github.com/Sirupsen/logrus"
+	//log "github.com/Sirupsen/logrus"
 	"os"
-	"os/signal"
-	"fmt"
+	//"os/signal"
+	//"fmt"
 	"flag"
+	//"path"
+	//"container/list"
 )
 
-const VERSION = "0.9.8-dev"
+const VERSION = "0.1.0"
 
 var logging_config = logging.LoggingConfig{Format:logging.DEFAULT_FORMAT, Level:"DEBUG"}
 
@@ -36,7 +38,7 @@ Scenarios:
   (2) Record live streams to local disks.
 
 Usage:
-  hls-get [OPTIONS,...] [URL1,URL2,...]
+  hls-sync [OPTIONS,...]
 
 Options:
 `
@@ -47,139 +49,80 @@ Options:
 
 func main() {
 
-	//O  'output'     - [STRING] Output directory. Default '.'.
+	//- `c` string
+	//Configuration file instead of command line parameters. Default empty means using parameters.
+	//See "Configuration Example" for detail.
+	var config string
+	flag.StringVar(&config, "c", "", "Configuration file instead of command line parameters. Default empty means using parameters.")
+	//- `O` string
+	//Output path. A base path for storage segments and play list.
 	var output string
-	flag.StringVar(&output, "O", ".", "Output base directory.")
-	//SR 'sync_rewrite'    - [STRING] Rewrite sync output path method. Default empty means simple copy.
-	var sync_rewrite string
-	flag.StringVar(&sync_rewrite, "SR", "", "Rewrite sync output path method. Empty means simple copy.")
-	//RR 'record_rewrite'     - [STRING] Rewrite record output method. Default empty means simple copy.
-	var record_rewrite string
-	flag.StringVar(&record_rewrite, "RR", "", "Rewrite record output method. Empty means simple copy.")
-	//UA 'user_agent'    - [STRING] UserAgent. Default is 'hls-get' with version num.
-	var user_agent string
-	flag.StringVar(&user_agent, "UA", "hls-get v" + VERSION, "UserAgent.")
-	//L  'log'   - [STRING] Logging output file. Default 'stdout'.
+	flag.StringVar(&output, "O", ".", "A base path for storage segments and play list.")
+	//- `OT` bool
+	//Output segment to a temp file first, then rename to target file after finished.
+	var output_temp bool
+	flag.BoolVar(&output_temp, "OT", false, "Output segment to a temp file first, then rename to target file after finished.")
+	//- `SR` string
+	//Segment filename rewrite rule. Default empty means simply copy.
+	//For example: "%Y/%m/%d/%H/live-%04d.ts"
+	var segment_rewrite string
+	flag.StringVar(&segment_rewrite, "SR", "", "Segment filename rewrite rule. Default empty means simply copy.")
+	//- `TZ` int
+	//Timezone shift. Default 0.
+	var timezone_shift int
+	flag.IntVar(&timezone_shift, "TZ", 0, "Timezone shift. Default 0.")
+	//- `TD` float64
+	//Target duration in seconds. Default 0.
+	var target_duration float64
+	flag.Float64Var(&target_duration, "TD", 0, "Target duration in seconds. Default 0.")
+	//- `L` string
+	//Logging output file. Default 'stdout'.
 	var log_file string
 	flag.StringVar(&log_file, "L", "", "Logging output file. Default 'stdout'.")
-	//R  'retry' - [INTEGER] Retry times if download fails.
-	var retries int
-	flag.IntVar(&retries, "R", 0, "Retry times if download fails.")
-	//RS 'redirect'   - [STRING] Redirect server request.
-	var redirect string
-	flag.StringVar(&redirect, "RS", "", "Redirect server request.")
-	//TO 'timeout'    - [INTEGER] Request timeout in seconds.
+	//- `LV` string
+	//Logging level. Default 'INFO'.
+	var log_level string
+	flag.StringVar(&log_level, "LV", "INFO", "Logging level. ")
+	//- `SP` bool
+	//Save play list file. Default false.
+	var save_playlist bool
+	flag.BoolVar(&save_playlist, "SP", false, "Save play list file. Default false.")
+	//- `TO` int
+	//Request timeout. Default 5.
 	var timeout int
-	flag.IntVar(&timeout, "TO", 20, "Request timeout in seconds.")
-	//HL 'hlslink'     - [STRING] HLS Links filename.
-	var hlslink string
-	flag.StringVar(&hlslink, "HL", "", "HLS Links filename.")
-	//UL 'use_localtime'
-	var use_localtime bool
-	flag.BoolVar(&use_localtime, "UL", false, "Use local time to track duration instead of supplied metadata.")
-	//US `use_segment_time'
-	var use_segment_time bool
-	flag.BoolVar(&use_segment_time, "US", false, "Use segment timestamp. Please specify the timestamp format.")
-	//ST `segment_timestamp` // 1-20160922T022309-67294.ts
-	var segment_timestamp string
-	flag.StringVar(&segment_timestamp, "ST", "1-%Y%M%DT%H%m%s-xxx.ts", "Segment time format.")
-	//SD `segment_duration`
-	//var segment_duration int
-	//flag.IntVar(&segment_duration, "SD", 5, "Segment duration in seconds.")
+	flag.IntVar(&timeout, "TO", 5, "Request timeout. ")
+	//- `R` int
+	//Retries. Default 1.
+	var retries int
+	flag.IntVar(&retries, "R", 1, "Retries.")
+	//- `UA` string
+	//User Agent. Default 'hls-sync v${VERSION}'.
+	var user_agent string
+	flag.StringVar(&user_agent, "UA", "hls-sync v"+VERSION, "User Agent. ")
+	//- `TT` int
+	//Timestamp type: 0: local timestamp, 1: program datetime, 2: timestamp from segment filename; default 0.
+	var timestamp_type int
+	flag.IntVar(&timestamp_type, "TT", 0, "Timestamp type: 0: local timestamp, 1: program datetime, 2: timestamp from segment filename; default 0.")
+	//- `ST` string
+	//Segment filename timestamp format.
+	var segment_time_format string
+	flag.StringVar(&segment_time_format, "ST", "", "Segment filename timestamp format.")
+	//- `RM` bool
+	//Remove old segments.
+	var remove_old_segments bool
+	flag.BoolVar(&remove_old_segments, "RM", false, "Remove old segments.")
+	//- `DP` bool
+	//Dump playlist file.
+	var dump_playlist bool
+	flag.BoolVar(&dump_playlist, "DP", false, "Dump playlist file.")
+	//- `PF` string
+	//Dumpped playlist filename format.
+	var plfile_format string
+	flag.StringVar(&plfile_format, "PF", "", "Dumpped playlist filename format.")
 
 	flag.Parse()
 
-	if !use_localtime && !use_segment_time {
-		use_localtime = true
-	}
-	if use_localtime && use_segment_time {
-		use_segment_time = true
-	}
+	if config != "" {
 
-	default_option := Option{}
-	default_option.Record_output = output
-	default_option.Sync_output = output
-	default_option.Sync_rewrite = sync_rewrite
-	default_option.Record_rewrite = record_rewrite
-	default_option.Redirect = redirect
-	default_option.Timeout = timeout
-	default_option.Use_localtime = use_localtime
-	default_option.Use_segment_time = use_segment_time
-	default_option.User_agent = user_agent
-	//default_option.Segment_duration = segment_duration
-	default_option.Segment_timestamp = segment_timestamp
-
-
-	var dump_flags = func () {
-		fmt.Println("=================================== Args =================================")
-		fmt.Println(">>", "output:", output)
-		fmt.Println(">>", "sync_rewrite:", sync_rewrite)
-		fmt.Println(">>", "record_rewrite:", record_rewrite)
-		fmt.Println(">>", "user_agent:", user_agent)
-		fmt.Println(">>", "log_file:", log_file)
-		fmt.Println(">>", "retries:", retries)
-		fmt.Println(">>", "redirect:", redirect)
-		fmt.Println(">>", "timeout:", timeout)
-		fmt.Println(">>", "hlslink:", hlslink)
-		fmt.Println(">>", "use_segment_time:", use_segment_time)
-		fmt.Println(">>", "segment_timestamp:", segment_timestamp)
-		//fmt.Println(">>", "segment_duration:", segment_duration)
-		fmt.Println("==========================================================================")
-		fmt.Printf("%+v \n", default_option)
-		fmt.Println("==========================================================================")
-	}
-
-	os.Stderr.Write([]byte(fmt.Sprintf("hls-sync v%v - HTTP Live Streaming (HLS) Synchronizer.\n", VERSION)))
-	os.Stderr.Write([]byte("Copyright (C) 2015 Mingcai SHEN <archsh@gmail.com>. Licensed for use under the GNU GPL version 3.\n"))
-	var hls_links []*SyncOption
-	if hlslink != "" {
-		hls_links = Load_HLS_Links(hlslink)
-	}else if flag.NArg() > 0 {
-		for _, ll := range flag.Args() {
-			op := Option{Source:ll}
-			so, e := Build_Sync_Option(&op, &default_option)
-			if nil != e {
-				log.Errorln("Failed to build sync option:", e)
-				continue
-			}
-			hls_links = append(hls_links, so)
-		}
-	}
-
-	dump_flags()
-
-	if len(hls_links) < 1 {
-		Usage()
-		return
-	}
-
-	logging_config.Filename = log_file
-	if log_file != "" {
-		logging.InitializeLogging(&logging_config, false, logging_config.Level)
-	}else{
-		logging.InitializeLogging(&logging_config, true, logging_config.Level)
-	}
-	defer logging.DeinitializeLogging()
-
-
-
-	for _, lk := range hls_links {
-		hs := NewHLSSynchronizer(lk)
-		go hs.Run()
-	}
-
-	endChan := make(chan bool)
-	term_c := make(chan os.Signal, 1)
-
-	signal.Notify(term_c, os.Interrupt)
-	for {
-		select {
-		case <-term_c:
-			log.Printf("User controled terminated.\n")
-			os.Exit(0)
-		case <-endChan:
-			log.Printf("Sync finished!\n")
-			break
-		}
 	}
 }

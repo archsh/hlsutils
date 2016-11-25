@@ -16,19 +16,28 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+type MediaPlayURL struct {
+	Url string
+	Weight uint8
+}
 
-type HLSSynchronizer struct {
+type Synchronizer struct {
 	sync_option *SyncOption
+	urls []*MediaPlayURL
 }
 
-func NewHLSSynchronizer(lko *SyncOption) *HLSSynchronizer{
-	hlssynchronizer := new(HLSSynchronizer)
-	hlssynchronizer.sync_option = lko
-	return hlssynchronizer
+func NewSynchronizer(output string,
+
+					 urls ...string) *Synchronizer {
+	if len(urls) < 1 {
+		panic("At least one url is required!")
+	}
+	synchronizer := new(Synchronizer)
+	return synchronizer
 }
 
-func (self *HLSSynchronizer) Run() {
-	log.Infoln("HLSSynchronizer.Run > Start sync", self.sync_option.Source)
+func (self *Synchronizer) Run() {
+	log.Infoln("Synchronizer.Run > Start sync", self.sync_option.Source)
 }
 
 
