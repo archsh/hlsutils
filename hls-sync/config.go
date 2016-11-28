@@ -7,15 +7,15 @@ import (
 
 type SyncOption struct {
 	// Sync Options ----------------------------------
-	// Output path.
 	Enabled     bool
 	Output      string
 	Output_Temp bool
 	Remove_Old  bool
 }
 
+
 type RecordOption struct {
-	                        // Record Options --------------------------------
+	// Record Options --------------------------------
 	Enabled          bool
 	Output           string
 	Segment_Rewrite  string
@@ -33,18 +33,18 @@ type SourceOption struct {
 
 type Option struct {
 	// Global Options --------------------------------
-	Log_File   string
-	Log_Level  string
-	Timeout    int
-	Retries    int
-	User_Agent string
+	Log_File     string
+	Log_Level    string
+	Timeout      int
+	Retries      int
+	User_Agent   string
 	Max_Segments int
 	// Sync Option
-	Sync       SyncOption
+	Sync         SyncOption
 	// Record Option
-	Record     RecordOption
+	Record       RecordOption
 	// Source URLs.
-	Source     SourceOption
+	Source       SourceOption
 }
 
 func LoadConfiguration(filename string, option *Option) (e error) {

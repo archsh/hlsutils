@@ -39,6 +39,9 @@ func NewSynchronizer(option *Option) (*Synchronizer, error) {
 	synchronizer := new(Synchronizer)
 	synchronizer.option = option
 	synchronizer.client = &http.Client{}
+	if synchronizer.option.Retries < 1 {
+		synchronizer.option.Retries = 1
+	}
 	return synchronizer, nil
 }
 
