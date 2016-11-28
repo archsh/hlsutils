@@ -29,7 +29,6 @@ type Synchronizer struct {
 
 type SegmentMessage struct {
 	segment *m3u8.MediaSegment
-	//referer string
 	response *http.Response
 }
 
