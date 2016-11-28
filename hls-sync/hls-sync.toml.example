@@ -1,0 +1,26 @@
+log_file = "./hls-sync.log"
+log_level = "DEBUG"
+timeout = 10
+retries = 3
+user_agent = "HLS-SYNC"
+
+[source]
+urls=["http://10.255.167.3:8080/group136/live/ch0.m3u8","http://10.255.167.5:8080/group136/live/ch0.m3u8"]
+
+[sync]
+enabled=true
+output="./"
+output_temp=true
+remove_old=true
+
+[record]
+enabled=true
+record_path="/data"
+segment_rewrite="%Y/%m/%d/%H/live-%04d.ts"
+reindex=true
+reindex_by="hour"
+reindex_format="%Y/%m/%d/%H/index.m3u8"
+timestamp_type="program"
+timestamp_format=""
+timezone_shift=0
+

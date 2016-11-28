@@ -25,8 +25,6 @@ You can run with several URL as failover mechanism. `hls-sync` the first one and
     For example: "%Y/%m/%d/%H/live-%04d.ts"
 - `TZ` int
     Timezone shift. Default 0.
-- `TD` int
-    Target duration in seconds. Default 0.
 - `L` string
     Logging output file. Default 'stdout'.
 - `LV` string

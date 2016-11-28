@@ -25,6 +25,7 @@ import (
 	"flag"
 	//"path"
 	//"container/list"
+	"fmt"
 )
 
 const VERSION = "0.1.0"
@@ -38,7 +39,7 @@ Scenarios:
   (2) Record live streams to local disks.
 
 Usage:
-  hls-sync [OPTIONS,...]
+  hls-sync [OPTIONS,...] [URLs ...]
 
 Options:
 `
@@ -48,81 +49,84 @@ Options:
 
 
 func main() {
-
-	//- `c` string
-	//Configuration file instead of command line parameters. Default empty means using parameters.
-	//See "Configuration Example" for detail.
+	option := Option{}
 	var config string
 	flag.StringVar(&config, "c", "", "Configuration file instead of command line parameters. Default empty means using parameters.")
-	//- `O` string
-	//Output path. A base path for storage segments and play list.
-	var output string
-	flag.StringVar(&output, "O", ".", "A base path for storage segments and play list.")
-	//- `OT` bool
-	//Output segment to a temp file first, then rename to target file after finished.
-	var output_temp bool
-	flag.BoolVar(&output_temp, "OT", false, "Output segment to a temp file first, then rename to target file after finished.")
-	//- `SR` string
-	//Segment filename rewrite rule. Default empty means simply copy.
-	//For example: "%Y/%m/%d/%H/live-%04d.ts"
-	var segment_rewrite string
-	flag.StringVar(&segment_rewrite, "SR", "", "Segment filename rewrite rule. Default empty means simply copy.")
-	//- `TZ` int
-	//Timezone shift. Default 0.
-	var timezone_shift int
-	flag.IntVar(&timezone_shift, "TZ", 0, "Timezone shift. Default 0.")
-	//- `TD` float64
-	//Target duration in seconds. Default 0.
-	var target_duration float64
-	flag.Float64Var(&target_duration, "TD", 0, "Target duration in seconds. Default 0.")
-	//- `L` string
-	//Logging output file. Default 'stdout'.
-	var log_file string
-	flag.StringVar(&log_file, "L", "", "Logging output file. Default 'stdout'.")
-	//- `LV` string
-	//Logging level. Default 'INFO'.
-	var log_level string
-	flag.StringVar(&log_level, "LV", "INFO", "Logging level. ")
-	//- `SP` bool
-	//Save play list file. Default false.
-	var save_playlist bool
-	flag.BoolVar(&save_playlist, "SP", false, "Save play list file. Default false.")
-	//- `TO` int
-	//Request timeout. Default 5.
-	var timeout int
-	flag.IntVar(&timeout, "TO", 5, "Request timeout. ")
-	//- `R` int
-	//Retries. Default 1.
-	var retries int
-	flag.IntVar(&retries, "R", 1, "Retries.")
-	//- `UA` string
-	//User Agent. Default 'hls-sync v${VERSION}'.
-	var user_agent string
-	flag.StringVar(&user_agent, "UA", "hls-sync v"+VERSION, "User Agent. ")
-	//- `TT` int
-	//Timestamp type: 0: local timestamp, 1: program datetime, 2: timestamp from segment filename; default 0.
-	var timestamp_type int
-	flag.IntVar(&timestamp_type, "TT", 0, "Timestamp type: 0: local timestamp, 1: program datetime, 2: timestamp from segment filename; default 0.")
-	//- `ST` string
-	//Segment filename timestamp format.
-	var segment_time_format string
-	flag.StringVar(&segment_time_format, "ST", "", "Segment filename timestamp format.")
-	//- `RM` bool
-	//Remove old segments.
-	var remove_old_segments bool
-	flag.BoolVar(&remove_old_segments, "RM", false, "Remove old segments.")
-	//- `DP` bool
-	//Dump playlist file.
-	var dump_playlist bool
-	flag.BoolVar(&dump_playlist, "DP", false, "Dump playlist file.")
-	//- `PF` string
-	//Dumpped playlist filename format.
-	var plfile_format string
-	flag.StringVar(&plfile_format, "PF", "", "Dumpped playlist filename format.")
+
+	// Global Arguments ================================================================================================
+	//Log_File string
+	flag.StringVar(&option.Log_File, "L", "", "Logging output file. Default 'stdout'.")
+	//Log_Level string
+	flag.StringVar(&option.Log_Level, "V", "INFO", "Logging level. ")
+	//Timeout int
+	flag.IntVar(&option.Timeout, "T", 5, "Request timeout. ")
+	//Retries int
+	flag.IntVar(&option.Retries, "R", 1, "Retries.")
+	//User_Agent string
+	flag.StringVar(&option.User_Agent, "UA", "hls-sync v"+VERSION, "User Agent. ")
+	//Max_Segments int
+	flag.IntVar(&option.Max_Segments, "MS", 20, "Max segments in playlist.")
+	// Sync Arguments ==================================================================================================
+	//Enabled bool
+	flag.BoolVar(&option.Sync.Enabled, "S", false, "Sync enabled.")
+	//Output string
+	flag.StringVar(&option.Sync.Output, "SO", ".", "A base path for synced segments and play list.")
+	//Output_Temp bool
+	flag.BoolVar(&option.Sync.Output_Temp, "OT", false, "Output segment to a temp file first, then rename to target file after finished.")
+	//Remove_Old bool
+	flag.BoolVar(&option.Sync.Remove_Old, "RM", false, "Remove old segments.")
+	// Record Arguments ================================================================================================
+	//Enabled bool
+	flag.BoolVar(&option.Record.Enabled, "RC", false, "Record enabled.")
+	//Output string
+	flag.StringVar(&option.Record.Output, "RO", ".", "Record output path.")
+	//Segment_Rewrite string
+	flag.StringVar(&option.Record.Segment_Rewrite, "SR", "%Y/%m/%d/%H/live-%04d.ts", "Segment filename rewrite rule. Default empty means simply copy.")
+	//Reindex bool
+	flag.BoolVar(&option.Record.Reindex, "RI", false, "Re-index playlist when recording.")
+	//Reindex_Format string
+	flag.StringVar(&option.Record.Reindex_Format, "RF", "%Y/%m/%d/%H/index.m3u8", "Re-index M3U8 filename format.")
+	//Reindex_By string // hour/minute
+	flag.StringVar(&option.Record.Reindex_By, "RB", "hour", "Re-index by 'hour' or 'minute'.")
+	//Timestamp_type string  // local|program|segment
+	flag.StringVar(&option.Record.Timestamp_type, "TT", "local", "Timestamp type: local, program, segment.")
+	//Timestamp_Format string
+	flag.StringVar(&option.Record.Timestamp_Format, "TF", "", "Timestamp format when using timestamp type as 'segment'.")
+	//Timezone_shift int
+	flag.IntVar(&option.Record.Timezone_shift,"TS", 0, "Timezone shifting when timestamp is not matching local timezone.")
 
 	flag.Parse()
 
 	if config != "" {
 
+		if e := LoadConfiguration(config, &option); e != nil {
+			os.Stderr.Write([]byte(fmt.Sprintf("Load config<%s> failed: %s.\n", config, e)))
+			os.Exit(1)
+		}else{
+			os.Stderr.Write([]byte(fmt.Sprintf("Loaded config from <%s>.\n", config)))
+		}
+	}else{
+		if flag.NArg() < 1 {
+			os.Stderr.Write([]byte("!!! At least one source URL is required!\n"))
+			Usage()
+			os.Exit(1)
+		}else{
+			option.Source.Urls = flag.Args()
+		}
+	}
+	logging_config.Filename = option.Log_File
+	logging_config.Level = option.Log_Level
+	if option.Log_File != "" {
+		logging.InitializeLogging(&logging_config, false, logging_config.Level)
+	}else{
+		logging.InitializeLogging(&logging_config, true, logging_config.Level)
+	}
+	defer logging.DeinitializeLogging()
+	//os.Stderr.Write([]byte(fmt.Sprintf(" %v \n", option)))
+	if sync, e := NewSynchronizer(&option); e != nil {
+		os.Stderr.Write([]byte(fmt.Sprintf("Start failed: %s.\n", e)))
+		os.Exit(1)
+	}else{
+		sync.Run()
 	}
 }
