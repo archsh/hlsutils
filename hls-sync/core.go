@@ -20,6 +20,7 @@ import (
 	"strings"
 	"net/url"
 	//"fmt"
+	"github.com/archsh/timefmt"
 )
 
 type Synchronizer struct {
@@ -28,7 +29,11 @@ type Synchronizer struct {
 }
 
 type SegmentMessage struct {
-	segment *m3u8.MediaSegment
+	_type SyncType
+	_hit bool
+	_target_duration float64
+	playlist *m3u8.MediaPlaylist
+	segment  *m3u8.MediaSegment
 	response *http.Response
 }
 
@@ -53,7 +58,7 @@ func (self *Synchronizer) Run() {
 	var wg sync.WaitGroup
 	wg.Add(4)
 	go func(){
-		self.playlistProc(segmentChan, syncChan, recordChan)
+		self.playlistProc(segmentChan)
 		wg.Done()
 	}()
 	go func(){
@@ -71,20 +76,21 @@ func (self *Synchronizer) Run() {
 	wg.Wait()
 }
 
-func (self *Synchronizer) playlistProc(segmentChan chan *SegmentMessage, syncChan chan *SyncMessage, recordChan chan *RecordMessage) {
-	//startTime := time.Now()
-	//var recDuration time.Duration = 0
-	//var firstList = true
+func (self *Synchronizer) playlistProc(segmentChan chan *SegmentMessage) {
 	cache := lru.New(self.option.Max_Segments)
-	if self.option.Sync.Remove_Old {
-		cache.OnEvicted = func(key lru.Key, value interface{}) {
-			fname, res := value.(string)
-			if res {
-				deleteOldSegment(fname)
-			}
-		}
-	}
 	retry := 0
+	timezone_shift := time.Minute * time.Duration(self.option.Timezone_shift)
+	timestamp_type := TST_LOCAL
+	switch strings.ToLower(self.option.Timestamp_type) {
+	case "local":
+		timestamp_type = TST_LOCAL
+	case "segment":
+		timestamp_type = TST_SEGMENT
+	default:
+		timestamp_type = TST_PROGRAM
+	}
+	log.Debugln("Timestamp Type:", timestamp_type)
+	log.Debugln("Timezone Shift:", timezone_shift)
 	for {
 		urlStr := self.option.Source.Urls[0]
 		req, err := http.NewRequest("GET", urlStr, nil)
@@ -113,41 +119,46 @@ func (self *Synchronizer) playlistProc(segmentChan chan *SegmentMessage, syncCha
 			continue
 		}
 		resp.Body.Close()
+		mpl_updated := false
+		lastTimestamp := time.Now()
 		if listType == m3u8.MEDIA {
 			mpl := playlist.(*m3u8.MediaPlaylist)
-			//log.Infoln("Get playlist:> ", mpl.SeqNo, mpl.TargetDuration, len(mpl.Segments))
-			//log.Debugln("Cache length:> ", cache.Len())
-			for _, v := range mpl.Segments {
+			//log.Debugln("Get playlist , segments = ", len(mpl.Segments))
+			for i, v := range mpl.Segments {
 				if v != nil {
-					//var msURI string
-					//var msFilename string
-					//if strings.HasPrefix(v.URI, "http") || strings.HasPrefix(v.URI, "https") {
-					//	msURI, err = url.QueryUnescape(v.URI)
-					//	if err != nil {
-					//		log.Println(err)
-					//		// log.Fatal(err)
-					//	}
-					//	//msFilename = path.Join(path.Dir(playlistFilename), path.Base(msURI))
-					//} else {
-					//	msUrl, err := resp.Request.URL.Parse(v.URI)
-					//	if err != nil {
-					//		log.Print(err)
-					//		continue
-					//	}
-					//	msURI, err = url.QueryUnescape(msUrl.String())
-					//	if err != nil {
-					//		log.Println(err)
-					//		// log.Fatal(err)
-					//	}
-					//	//msFilename = path.Join(outDir, msUrl.Path)
-					//}
-					_, hit := cache.Get(v.URI)
+					//log.Debugln("Segment:> ", v.URI, v.ProgramDateTime)
+					t, hit := cache.Get(v.URI)
 					if !hit {
-						cache.Add(v.URI, nil)
-						log.Infoln("New segment:> ", mpl.SeqNo, v.URI, v.Duration, v.SeqId, v.ProgramDateTime)
+						if timestamp_type == TST_SEGMENT {
+							v.ProgramDateTime, _ = timefmt.Strptime(v.URI, self.option.Timestamp_Format)
+						}
+						if timestamp_type == TST_LOCAL || v.ProgramDateTime.Year() < 2016 || v.ProgramDateTime.Month() == 0 || v.ProgramDateTime.Day() == 0 {
+							v.ProgramDateTime = lastTimestamp
+							lastTimestamp = lastTimestamp.Add(time.Duration(v.Duration)*time.Second)
+						}else{
+							v.ProgramDateTime = v.ProgramDateTime.Add(timezone_shift)
+						}
+						cache.Add(v.URI, v.ProgramDateTime)
+						log.Infoln("New segment:> ", i, "=>", mpl.SeqNo, v.URI, v.Duration, v.SeqId, v.ProgramDateTime)
 						if self.option.Sync.Enabled || self.option.Record.Enabled {
 							// Only get segments when sync or record enabled.
 							msg := &SegmentMessage{}
+							msg._type = SEGMEMT
+							msg._hit = false
+							msg._target_duration = mpl.TargetDuration
+							msg.segment = v
+							msg.response = resp
+							segmentChan <- msg
+						}
+						mpl_updated = true
+					}else{
+						v.ProgramDateTime = t.(time.Time)
+						if self.option.Sync.Enabled || self.option.Record.Enabled {
+							// Only get segments when sync or record enabled.
+							msg := &SegmentMessage{}
+							msg._type = SEGMEMT
+							msg._hit = true
+							msg._target_duration = mpl.TargetDuration
 							msg.segment = v
 							msg.response = resp
 							segmentChan <- msg
@@ -155,19 +166,17 @@ func (self *Synchronizer) playlistProc(segmentChan chan *SegmentMessage, syncCha
 					}
 				}
 			}
-			if self.option.Sync.Enabled {
-				msg := &SyncMessage{}
+			if self.option.Sync.Enabled && mpl_updated {
+				msg := &SegmentMessage{}
 				msg._type = PLAYLIST
+				msg._target_duration = mpl.TargetDuration
+				msg.segment = nil
+				msg.response = resp
 				msg.playlist = mpl
-				syncChan <- msg
+				segmentChan <- msg
 			}
-			//if !firstList {
-			//	cache.RemoveOldest()
-			//}
-			//firstList = false
 			if mpl.Closed {
-				close(syncChan)
-				close(recordChan)
+				close(segmentChan)
 				return
 			} else {
 				time.Sleep(time.Duration(int64((mpl.TargetDuration/2) * 1000000000)))
@@ -180,59 +189,75 @@ func (self *Synchronizer) playlistProc(segmentChan chan *SegmentMessage, syncCha
 }
 
 
-
-
-
 func (self *Synchronizer) segmentProc(segmentChan chan *SegmentMessage, syncChan chan *SyncMessage, recordChan chan *RecordMessage) {
 	for msg := range segmentChan {
 		if nil == msg {
 			continue
 		}
-		log.Debugln("Getting segment:> ", msg.segment.URI)
-		var msURI string
-		if strings.HasPrefix(msg.segment.URI, "http://") || strings.HasPrefix(msg.segment.URI, "https://") {
-			msURI, _ = url.QueryUnescape(msg.segment.URI)
-		} else {
-			msUrl, _ := msg.response.Request.URL.Parse(msg.segment.URI)
-			msURI, _ = url.QueryUnescape(msUrl.String())
-		}
-		for i:=0; i< self.option.Retries; i++ {
-			req, err := http.NewRequest("GET", msURI, nil)
-			if err != nil {
-				log.Errorf("GetSegment:1> Create new request failed: %v\n", err)
+		if msg._type == PLAYLIST {
+			le_msg := &SyncMessage{}
+			le_msg._type = msg._type
+			le_msg.playlist = msg.playlist
+			le_msg.segment = nil
+			le_msg.seg_buffer = nil
+			syncChan <- le_msg
+		}else{
+			var msURI string
+			var msFilename string
+			if strings.HasPrefix(msg.segment.URI, "http://") || strings.HasPrefix(msg.segment.URI, "https://") {
+				msURI, _ = url.QueryUnescape(msg.segment.URI)
+				msFilename,_ = timefmt.Strftime(msg.segment.ProgramDateTime, "%Y%m%d-%H%M%S.ts")
+			} else {
+				msUrl, _ := msg.response.Request.URL.Parse(msg.segment.URI)
+				msURI, _ = url.QueryUnescape(msUrl.String())
+				msFilename = msg.segment.URI
+				//msFilename,_ = timefmt.Strftime(msg.segment.ProgramDateTime, "%Y%m%d-%H%M%S.ts")
 			}
+			msg.segment.URI = msFilename
+			if msg._hit {
+				continue
+			}
+			log.Debugln("Getting new segment:> ", msg.segment.URI)
+			for i:=0; i< self.option.Retries; i++ {
+				req, err := http.NewRequest("GET", msURI, nil)
+				if err != nil {
+					log.Errorf("GetSegment:1> Create new request failed: %v\n", err)
+				}
 
-			resp, err := self.doRequest(req)
-			if err != nil {
-				log.Errorf("GetSegment:4> do request failed: %v\n", err)
-				time.Sleep(time.Duration(1) * time.Second)
-				continue
-			}
-			if resp.StatusCode != 200 {
-				log.Errorf("Received HTTP %v for %v \n", resp.StatusCode, msURI)
-				time.Sleep(time.Duration(1) * time.Second)
-				continue
-			}
-			respBody, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				log.Errorln("Read Response body failed:> ", err)
-				time.Sleep(time.Duration(1) * time.Second)
-				continue
-			}
-			resp.Body.Close()
-			buffer := bytes.NewBuffer(respBody)
-			if self.option.Sync.Enabled {
-				le_msg := &SyncMessage{}
-				le_msg._type = SEGMEMT
-				le_msg.segment = msg.segment
-				le_msg.seg_buffer = buffer
-				syncChan <- le_msg
-			}
-			if self.option.Record.Enabled {
-				le_msg := &RecordMessage{}
-				le_msg.segment = msg.segment
-				le_msg.seg_buffer = buffer
-				recordChan <- le_msg
+				resp, err := self.doRequest(req)
+				if err != nil {
+					log.Errorf("GetSegment:4> do request failed: %v\n", err)
+					time.Sleep(time.Duration(1) * time.Second)
+					continue
+				}
+				if resp.StatusCode != 200 {
+					log.Errorf("Received HTTP %v for %v \n", resp.StatusCode, msURI)
+					time.Sleep(time.Duration(1) * time.Second)
+					continue
+				}
+				respBody, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					log.Errorln("Read Response body failed:> ", err)
+					time.Sleep(time.Duration(1) * time.Second)
+					continue
+				}
+				resp.Body.Close()
+				buffer := bytes.NewBuffer(respBody)
+				bufdata := buffer.Bytes()
+				if self.option.Sync.Enabled {
+					le_msg := &SyncMessage{}
+					le_msg._type = SEGMEMT
+					le_msg.segment = msg.segment
+					le_msg.seg_buffer = bytes.NewBuffer(bufdata)
+					syncChan <- le_msg
+				}
+				if self.option.Record.Enabled {
+					le_msg := &RecordMessage{}
+					le_msg._target_duration = msg._target_duration
+					le_msg.segment = msg.segment
+					le_msg.seg_buffer = bytes.NewBuffer(bufdata)
+					recordChan <- le_msg
+				}
 			}
 		}
 	}

@@ -9,7 +9,7 @@ type SyncOption struct {
 	// Sync Options ----------------------------------
 	Enabled     bool
 	Output      string
-	Output_Temp bool
+	Index_Name  string
 	Remove_Old  bool
 }
 
@@ -22,9 +22,6 @@ type RecordOption struct {
 	Reindex          bool
 	Reindex_Format   string
 	Reindex_By       string // hour/minute
-	Timestamp_type   string // local|program|segment
-	Timestamp_Format string
-	Timezone_shift   int
 }
 
 type SourceOption struct {
@@ -39,6 +36,10 @@ type Option struct {
 	Retries      int
 	User_Agent   string
 	Max_Segments int
+	Timestamp_type   string // local|program|segment
+	Timestamp_Format string
+	Timezone_shift   int
+	Target_Duration  int
 	// Sync Option
 	Sync         SyncOption
 	// Record Option

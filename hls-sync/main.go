@@ -50,9 +50,6 @@ Options:
 
 func main() {
 	option := Option{}
-	var config string
-	flag.StringVar(&config, "c", "", "Configuration file instead of command line parameters. Default empty means using parameters.")
-
 	// Global Arguments ================================================================================================
 	//Log_File string
 	flag.StringVar(&option.Log_File, "L", "", "Logging output file. Default 'stdout'.")
@@ -66,13 +63,21 @@ func main() {
 	flag.StringVar(&option.User_Agent, "UA", "hls-sync v"+VERSION, "User Agent. ")
 	//Max_Segments int
 	flag.IntVar(&option.Max_Segments, "MS", 20, "Max segments in playlist.")
+	//Timestamp_type string  // local|program|segment
+	flag.StringVar(&option.Timestamp_type, "TT", "program", "Timestamp type: local, program, segment.")
+	//Timestamp_Format string
+	flag.StringVar(&option.Timestamp_Format, "TF", "", "Timestamp format when using timestamp type as 'segment'.")
+	//Timezone_shift int
+	flag.IntVar(&option.Timezone_shift,"TS", 0, "Timezone shifting by minutes when timestamp is not matching local timezone.")
+	//Target_Duration int
+	flag.IntVar(&option.Target_Duration, "TD", 0, "Target duration of source. Real target duration will be used when set to 0.")
 	// Sync Arguments ==================================================================================================
 	//Enabled bool
 	flag.BoolVar(&option.Sync.Enabled, "S", false, "Sync enabled.")
 	//Output string
 	flag.StringVar(&option.Sync.Output, "SO", ".", "A base path for synced segments and play list.")
-	//Output_Temp bool
-	flag.BoolVar(&option.Sync.Output_Temp, "OT", false, "Output segment to a temp file first, then rename to target file after finished.")
+	//Index_Name string
+	flag.StringVar(&option.Sync.Index_Name, "OI", "live.m3u8", "Index playlist filename.")
 	//Remove_Old bool
 	flag.BoolVar(&option.Sync.Remove_Old, "RM", false, "Remove old segments.")
 	// Record Arguments ================================================================================================
@@ -81,19 +86,18 @@ func main() {
 	//Output string
 	flag.StringVar(&option.Record.Output, "RO", ".", "Record output path.")
 	//Segment_Rewrite string
-	flag.StringVar(&option.Record.Segment_Rewrite, "SR", "%Y/%m/%d/%H/live-%04d.ts", "Segment filename rewrite rule. Default empty means simply copy.")
+	flag.StringVar(&option.Record.Segment_Rewrite, "SR", "%Y/%m/%d/%H/live-#:04.ts", "Segment filename rewrite rule. Default empty means simply copy.")
 	//Reindex bool
 	flag.BoolVar(&option.Record.Reindex, "RI", false, "Re-index playlist when recording.")
 	//Reindex_Format string
 	flag.StringVar(&option.Record.Reindex_Format, "RF", "%Y/%m/%d/%H/index.m3u8", "Re-index M3U8 filename format.")
 	//Reindex_By string // hour/minute
 	flag.StringVar(&option.Record.Reindex_By, "RB", "hour", "Re-index by 'hour' or 'minute'.")
-	//Timestamp_type string  // local|program|segment
-	flag.StringVar(&option.Record.Timestamp_type, "TT", "local", "Timestamp type: local, program, segment.")
-	//Timestamp_Format string
-	flag.StringVar(&option.Record.Timestamp_Format, "TF", "", "Timestamp format when using timestamp type as 'segment'.")
-	//Timezone_shift int
-	flag.IntVar(&option.Record.Timezone_shift,"TS", 0, "Timezone shifting when timestamp is not matching local timezone.")
+	// Functional Arguments ============================================================================================
+	var config string
+	flag.StringVar(&config, "c", "", "Configuration file instead of command line parameters. Default empty means using parameters.")
+	var check bool
+	flag.BoolVar(&check, "C", false, "Check options.")
 
 	flag.Parse()
 
@@ -114,6 +118,12 @@ func main() {
 			option.Source.Urls = flag.Args()
 		}
 	}
+	if check {
+		os.Stderr.Write([]byte(fmt.Sprint("Checking options ...\n")))
+		os.Stderr.Write([]byte(fmt.Sprintf("Options> \n %+v \n", option)))
+		os.Exit(0)
+	}
+
 	logging_config.Filename = option.Log_File
 	logging_config.Level = option.Log_Level
 	if option.Log_File != "" {
