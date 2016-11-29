@@ -28,7 +28,7 @@ import (
 	"fmt"
 )
 
-const VERSION = "0.1.0"
+const VERSION = "0.2.0"
 
 var logging_config = logging.LoggingConfig{Format:logging.DEFAULT_FORMAT, Level:"DEBUG"}
 
