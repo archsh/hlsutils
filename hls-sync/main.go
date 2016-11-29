@@ -96,9 +96,17 @@ func main() {
 	flag.StringVar(&config, "c", "", "Configuration file instead of command line parameters. Default empty means using parameters.")
 	var check bool
 	flag.BoolVar(&check, "C", false, "Check options.")
-
+	var showVersion bool
+	flag.BoolVar(&showVersion, "v", false, "Display version info.")
 	flag.Parse()
 
+
+	if showVersion {
+		os.Stderr.Write([]byte(fmt.Sprintf("hls-sync v%v\n", VERSION)))
+		os.Exit(0)
+	}
+	os.Stderr.Write([]byte(fmt.Sprintf("hls-sync v%v - HTTP Live Streaming (HLS) Synchronizer.\n", VERSION)))
+	os.Stderr.Write([]byte("Copyright (C) 2015 Mingcai SHEN <archsh@gmail.com>. Licensed for use under the GNU GPL version 3.\n"))
 	if config != "" {
 
 		if e := LoadConfiguration(config, &option); e != nil {

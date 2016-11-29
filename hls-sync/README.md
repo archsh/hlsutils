@@ -17,7 +17,10 @@ You can run with several URL as failover mechanism. `hls-sync` the first one and
 #### Control Options
   - `c` string
         Configuration file instead of command line parameters. Default empty means using parameters.
-  - `C `   Check options.
+  - `C `   
+        Check options.
+  - `v` 
+        Show version info.
        
 #### Global Options
 
