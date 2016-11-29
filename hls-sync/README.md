@@ -39,6 +39,9 @@ You can run with several URL as failover mechanism. `hls-sync` the first one and
         User Agent.  (default "hls-sync v0.2.0")
   - `V` string
         Logging level.  (default "INFO")
+  - `PF` string
+        To fit some stupid encoders which generated stupid time format. (default "2006-01-02T15:04:05.999999999Z07:00")
+        eg: set it to "2006-01-02T15:04:05z" if you have something like: "#EXT-X-PROGRAM-DATE-TIME:2016-11-29T17:55:02z"
 
 #### Sync Options
   - `S`

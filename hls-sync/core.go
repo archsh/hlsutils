@@ -2,24 +2,16 @@ package main
 
 import (
 	"bytes"
-	//"fmt"
 	"errors"
 	"github.com/golang/groupcache/lru"
-	"github.com/grafov/m3u8"
-	//"io"
+	"github.com/archsh/m3u8"
 	"io/ioutil"
 	"net/http"
-	//"net/url"
-	//"os"
-	//"path"
-	//"strings"
 	"time"
 	log "github.com/Sirupsen/logrus"
 	"sync"
-	//"path/filepath"
 	"strings"
 	"net/url"
-	//"fmt"
 	"github.com/archsh/timefmt"
 )
 
@@ -47,6 +39,9 @@ func NewSynchronizer(option *Option) (*Synchronizer, error) {
 	if synchronizer.option.Retries < 1 {
 		synchronizer.option.Retries = 1
 	}
+	if synchronizer.option.Program_Time_Format == "" {
+		synchronizer.option.Program_Time_Format = time.RFC3339Nano
+	}
 	return synchronizer, nil
 }
 
@@ -55,6 +50,7 @@ func (self *Synchronizer) Run() {
 	syncChan := make(chan *SyncMessage, 20)
 	recordChan := make(chan *RecordMessage, 20)
 	segmentChan := make(chan *SegmentMessage, 20)
+	m3u8.ProgramTimeFormat = self.option.Program_Time_Format
 	var wg sync.WaitGroup
 	wg.Add(4)
 	go func(){

@@ -1,7 +1,6 @@
 package main
 
 import (
-	//log "github.com/Sirupsen/logrus"
 	"github.com/BurntSushi/toml"
 )
 
@@ -40,6 +39,7 @@ type Option struct {
 	Timestamp_Format string
 	Timezone_shift   int
 	Target_Duration  int
+	Program_Time_Format string
 	// Sync Option
 	Sync         SyncOption
 	// Record Option

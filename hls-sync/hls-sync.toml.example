@@ -1,4 +1,4 @@
-log_file = "./hls-sync.log"
+log_file = ""
 log_level = "DEBUG"
 timeout = 10
 retries = 3
@@ -7,7 +7,7 @@ timestamp_type="program"
 timestamp_format=""
 timezone_shift=0
 target_duration=5
-
+program_time_format=""
 [source]
 urls=[]
 
@@ -18,7 +18,7 @@ remove_old=true
 
 [record]
 enabled=true
-record_path="/data"
+output="."
 segment_rewrite="%Y/%m/%d/%H/live-#:04.ts"
 reindex=true
 reindex_by="hour"

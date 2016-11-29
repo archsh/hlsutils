@@ -18,17 +18,13 @@ package main
 
 import (
 	"github.com/archsh/hlsutils/helpers/logging"
-	//log "github.com/Sirupsen/logrus"
 	"os"
-	//"os/signal"
-	//"fmt"
 	"flag"
-	//"path"
-	//"container/list"
 	"fmt"
+	"time"
 )
 
-const VERSION = "0.2.0"
+const VERSION = "0.9.0"
 
 var logging_config = logging.LoggingConfig{Format:logging.DEFAULT_FORMAT, Level:"DEBUG"}
 
@@ -71,6 +67,8 @@ func main() {
 	flag.IntVar(&option.Timezone_shift,"TS", 0, "Timezone shifting by minutes when timestamp is not matching local timezone.")
 	//Target_Duration int
 	flag.IntVar(&option.Target_Duration, "TD", 0, "Target duration of source. Real target duration will be used when set to 0.")
+	//Program_Time_Format string
+	flag.StringVar(&option.Program_Time_Format, "PF", time.RFC3339Nano, "To fit some stupid encoders which generated stupid time format.")
 	// Sync Arguments ==================================================================================================
 	//Enabled bool
 	flag.BoolVar(&option.Sync.Enabled, "S", false, "Sync enabled.")
