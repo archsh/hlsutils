@@ -137,6 +137,7 @@ func (self *Synchronizer) recordProc(msgChan chan *RecordMessage) {
 			Title: msg.segment.URI,
 		}
 		index_playlist.AppendSegment(&seg)
+		self.saveIndexPlaylist(index_playlist)
 	}
 }
 
