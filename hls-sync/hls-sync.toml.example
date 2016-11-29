@@ -9,7 +9,7 @@ timezone_shift=0
 target_duration=5
 
 [source]
-urls=["http://118.122.88.230:5460/luzhi1/vdf/live/c005/now/live.m3u8"]
+urls=[]
 
 [sync]
 enabled=true

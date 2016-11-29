@@ -109,6 +109,9 @@ func main() {
 		}else{
 			os.Stderr.Write([]byte(fmt.Sprintf("Loaded config from <%s>.\n", config)))
 		}
+		if flag.NArg() > 0 {
+			option.Source.Urls = append(option.Source.Urls, flag.Args()...)
+		}
 	}else{
 		if flag.NArg() < 1 {
 			os.Stderr.Write([]byte("!!! At least one source URL is required!\n"))
