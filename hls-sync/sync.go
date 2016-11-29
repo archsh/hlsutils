@@ -27,12 +27,13 @@ type SyncMessage struct {
 
 func (self *Synchronizer) syncProc(msgChan chan *SyncMessage) {
 	cache := lru.New(self.option.Max_Segments)
+
 	if self.option.Sync.Remove_Old {
 		cache.OnEvicted = func (k lru.Key, v interface{}){
 			fname := v.(string)
 			err := os.Remove(fname)
 			if err != nil {
-				log.Errorf("Delete file %v failed! <%v>", fname, err)
+				log.Errorf("Delete file '%s' failed:> %s \n", fname, err)
 			}
 		}
 	}
@@ -47,25 +48,28 @@ func (self *Synchronizer) syncProc(msgChan chan *SyncMessage) {
 			filename := filepath.Join(self.option.Sync.Output, self.option.Sync.Index_Name)
 			out, err := os.Create(filename)
 			if err != nil {
-				log.Errorf("syncProc:> %v \n", err)
+				log.Errorf("Create playlist file '%s' failed:> %s \n", filename, err)
 				continue
 			}
 			buf := msg.playlist.Encode()
-			io.Copy(out, buf)
+			_, e := io.Copy(out, buf)
+			if nil != e {
+				log.Errorf("Write playlist '%s' failed:> %s \n", filename, e)
+			}
 			out.Close()
 		case SEGMEMT:
 			log.Debugln("Syncing segment:> ", msg.segment.URI, msg.seg_buffer.Len())
 			filename := filepath.Join(self.option.Sync.Output, msg.segment.URI)
 			out, err := os.Create(filename)
 			if err != nil {
-				log.Errorf("syncProc:> %v \n", err)
+				log.Errorf("Create file '%s' failed:> %s \n", filename, err)
 				continue
 			}
 			n, e := msg.seg_buffer.WriteTo(out)
 			if e != nil {
-				log.Errorln("Write segment data failed:> ", e)
+				log.Errorf("Write segment file '%s' failed:> %s \n", filename, e)
 			}else{
-				log.Debugln("Write segment data bytes:> ", n)
+				log.Debugf("Write segment file '%s' bytes:> %d \n", filename, n)
 			}
 			cache.Add(msg.segment.URI, filename)
 			out.Close()

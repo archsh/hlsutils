@@ -31,7 +31,7 @@ type SegmentMessage struct {
 
 func NewSynchronizer(option *Option) (*Synchronizer, error) {
 	if len(option.Source.Urls) < 1 {
-		return nil, errors.New("!!! At least one source URL is required!")
+		return nil, errors.New("\n\n!!! At least one source URL is required!\n\n")
 	}
 	synchronizer := new(Synchronizer)
 	synchronizer.option = option
@@ -46,7 +46,7 @@ func NewSynchronizer(option *Option) (*Synchronizer, error) {
 }
 
 func (self *Synchronizer) Run() {
-	log.Infoln("Synchronizer.Run > Start hls-sync ...")
+	log.Infoln("Synchronizer.Run > Starting hls-sync ...")
 	syncChan := make(chan *SyncMessage, 20)
 	recordChan := make(chan *RecordMessage, 20)
 	segmentChan := make(chan *SegmentMessage, 20)
@@ -85,31 +85,43 @@ func (self *Synchronizer) playlistProc(segmentChan chan *SegmentMessage) {
 	default:
 		timestamp_type = TST_PROGRAM
 	}
-	log.Debugln("Timestamp Type:", timestamp_type)
-	log.Debugln("Timezone Shift:", timezone_shift)
+	//log.Debugln("Timestamp Type:", timestamp_type)
+	//log.Debugln("Timezone Shift:", timezone_shift)
+	src_idx := 0
 	for {
-		urlStr := self.option.Source.Urls[0]
+		if retry >= self.option.Retries {
+			if len(self.option.Source.Urls) > (src_idx+1) {
+				src_idx += 1
+				retry = 0
+			}else if src_idx > 0 {
+				src_idx = 0
+				retry = 0
+			}
+		}
+		urlStr := self.option.Source.Urls[src_idx]
 		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
 			log.Errorln("Create Request failed:>", err)
-			return
+			continue
 		}
 		resp, err := self.doRequest(req)
 		if err != nil {
-			log.Errorln("doRequest failed:> ", err)
+			log.Errorln("doRequest failed:> ", retry, err)
 			time.Sleep(time.Duration(1) * time.Second)
+			retry++
 			continue
 		}
 		respBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.Errorln("Read Response body failed:> ", err)
+			log.Errorln("Read Response body failed:> ", retry, err)
 			time.Sleep(time.Duration(1) * time.Second)
+			retry++
 			continue
 		}
 		buffer := bytes.NewBuffer(respBody)
 		playlist, listType, err := m3u8.Decode(*buffer, true)
 		if err != nil {
-			log.Errorln("Decode playlist failed:> ", err)
+			log.Errorln("Decode playlist failed:> ", retry, err)
 			time.Sleep(time.Duration(1) * time.Second)
 			retry ++
 			continue
@@ -120,7 +132,8 @@ func (self *Synchronizer) playlistProc(segmentChan chan *SegmentMessage) {
 		if listType == m3u8.MEDIA {
 			mpl := playlist.(*m3u8.MediaPlaylist)
 			//log.Debugln("Get playlist , segments = ", len(mpl.Segments))
-			for i, v := range mpl.Segments {
+			retry = 0
+			for _, v := range mpl.Segments {
 				if v != nil {
 					//log.Debugln("Segment:> ", v.URI, v.ProgramDateTime)
 					t, hit := cache.Get(v.URI)
@@ -135,7 +148,7 @@ func (self *Synchronizer) playlistProc(segmentChan chan *SegmentMessage) {
 							v.ProgramDateTime = v.ProgramDateTime.Add(timezone_shift)
 						}
 						cache.Add(v.URI, v.ProgramDateTime)
-						log.Infoln("New segment:> ", i, "=>", mpl.SeqNo, v.URI, v.Duration, v.SeqId, v.ProgramDateTime)
+						log.Infoln("New segment:> ", mpl.SeqNo, v.URI, v.Duration, v.SeqId, v.ProgramDateTime)
 						if self.option.Sync.Enabled || self.option.Record.Enabled {
 							// Only get segments when sync or record enabled.
 							msg := &SegmentMessage{}
@@ -178,7 +191,7 @@ func (self *Synchronizer) playlistProc(segmentChan chan *SegmentMessage) {
 				time.Sleep(time.Duration(int64((mpl.TargetDuration/2) * 1000000000)))
 			}
 		} else {
-			log.Errorln("> Not a valid media playlist")
+			log.Errorln("> Not a valid media playlist.", retry)
 			retry ++
 		}
 	}
@@ -213,21 +226,21 @@ func (self *Synchronizer) segmentProc(segmentChan chan *SegmentMessage, syncChan
 			if msg._hit {
 				continue
 			}
-			log.Debugln("Getting new segment:> ", msg.segment.URI)
+			log.Debugln("Downloading new segment:> ", msg.segment.URI)
 			for i:=0; i< self.option.Retries; i++ {
 				req, err := http.NewRequest("GET", msURI, nil)
 				if err != nil {
-					log.Errorf("GetSegment:1> Create new request failed: %v\n", err)
+					log.Errorf("Create new request failed:> %s\n", err)
+					continue
 				}
-
 				resp, err := self.doRequest(req)
 				if err != nil {
-					log.Errorf("GetSegment:4> do request failed: %v\n", err)
+					log.Errorf("Do request failed:> %s \n", err)
 					time.Sleep(time.Duration(1) * time.Second)
 					continue
 				}
 				if resp.StatusCode != 200 {
-					log.Errorf("Received HTTP %v for %v \n", resp.StatusCode, msURI)
+					log.Errorf("Received HTTP %d for %s \n", resp.StatusCode, msURI)
 					time.Sleep(time.Duration(1) * time.Second)
 					continue
 				}

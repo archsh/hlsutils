@@ -46,10 +46,12 @@ func (self *Synchronizer) recordProc(msgChan chan *RecordMessage) {
 	}
 	log.Debugln("Index By:", index_by)
 	index := 0
-	index_playlist, e := m3u8.NewMediaPlaylist(2048, 2048)
-	if nil != e {
-		log.Errorln("Create playlist failed:>", e)
-	}
+	var index_playlist *m3u8.MediaPlaylist
+	var e error
+	//index_playlist, e := m3u8.NewMediaPlaylist(2048, 2048)
+	//if nil != e {
+	//	log.Errorln("Create playlist failed:>", e)
+	//}
 	last_seg_timestamp := time.Time{}
 	var last_seg_duration time.Duration = 0
 	for msg := range msgChan {
@@ -123,24 +125,24 @@ func (self *Synchronizer) recordProc(msgChan chan *RecordMessage) {
 		}
 		log.Debugln("Recording segment:> ", msg.segment, msg.seg_buffer.Len())
 		fname, e := self.generateFilename(self.option.Record.Output, self.option.Record.Segment_Rewrite, msg.segment.ProgramDateTime, index)
-		log.Debugf("New filename:> %s <%s> \n", fname, e)
+		//log.Debugf("New filename:> %s <%s> \n", fname, e)
 		e = os.MkdirAll(filepath.Dir(fname), 0777)
 		if e != nil {
-			log.Errorf("Create directory '%s' failed: %v \n", filepath.Dir(fname), e)
+			log.Errorf("Create directory '%s' failed:> %s \n", filepath.Dir(fname), e)
 			continue
 		}
 		out, err := os.Create(fname)
 		if err != nil {
-			log.Errorf("Create segment file failed:> %v \n", err)
+			log.Errorf("Create segment file '%s' failed:> %s \n", fname, err)
 			return
 		}
 		n, e := msg.seg_buffer.WriteTo(out)
 		if nil != e {
-			log.Errorf("Write to segment file failed:> %v \n", err)
+			log.Errorf("Write to segment file '%s' failed:> %s \n", fname, err)
 			out.Close()
 			continue
 		}else{
-			log.Debugln("Write to segment file bytes: ", n)
+			log.Debugf("Write to segment file '%s' bytes:> %d \n", fname, n)
 		}
 		out.Close()
 		last_seg_timestamp = msg.segment.ProgramDateTime
@@ -166,17 +168,22 @@ func (self *Synchronizer) saveIndexPlaylist(playlist *m3u8.MediaPlaylist) {
 	log.Debugf("Re-index into file:> %s <%s> \n", fname, e)
 	e = os.MkdirAll(filepath.Dir(fname), 0777)
 	if e != nil {
-		log.Errorf("saveIndexPlaylist:> Create directory '%s' failed: %v \n", filepath.Dir(fname), e)
+		log.Errorf("Create directory '%s' failed:> %s \n", filepath.Dir(fname), e)
 		return
 	}
 	out, err := os.Create(fname)
-	defer out.Close()
 	if err != nil {
-		log.Errorf("saveIndexPlaylist:> %v \n", err)
+		log.Errorf("Create index file '%s' failed:>  %s \n", fname, err)
 		return
 	}
+	defer out.Close()
 	buf := playlist.Encode()
-	io.Copy(out, buf)
+	n, e := io.Copy(out, buf)
+	if nil != e {
+		log.Errorf("Write index file '%s' failed:> %s \n", fname, e)
+	}else{
+		log.Debugf("Write index file '%s' bytes:> %d \n", fname, n)
+	}
 }
 
 func (self *Synchronizer) generateFilename(output string, format string, tm time.Time, idx int) (string, error) {
