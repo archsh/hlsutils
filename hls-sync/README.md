@@ -91,7 +91,7 @@ timestamp_type="program"
 timestamp_format=""
 timezone_shift=0
 target_duration=5
-
+program_time_format=""
 [source]
 urls=["http://live1.example.com/chan01/live.m3u8"]
 

@@ -51,6 +51,7 @@ func (self *Synchronizer) recordProc(msgChan chan *RecordMessage) {
 		log.Errorln("Create playlist failed:>", e)
 	}
 	last_seg_timestamp := time.Time{}
+	var last_seg_duration time.Duration = 0
 	for msg := range msgChan {
 		if nil == msg {
 			continue
@@ -69,7 +70,7 @@ func (self *Synchronizer) recordProc(msgChan chan *RecordMessage) {
 				}
 				index_playlist.Close()
 				self.saveIndexPlaylist(index_playlist)
-				index_playlist, e = m3u8.NewMediaPlaylist(2048, 2048)
+				index_playlist, e = m3u8.NewMediaPlaylist(128, 128)
 				if nil != e {
 					log.Errorln("Create playlist failed:>", e)
 					continue
@@ -104,6 +105,22 @@ func (self *Synchronizer) recordProc(msgChan chan *RecordMessage) {
 				}
 			}
 		}
+		// In case of stream paused for some time.
+		if last_seg_duration > 0 && segtime.Sub(last_seg_timestamp) > time.Duration(last_seg_duration*2)*time.Second {
+			if index_by == IDXT_MINUTE {
+				if self.option.Target_Duration < 1 {
+					index = segtime.Second()/int(msg._target_duration)
+				}else{
+					index = segtime.Second()/self.option.Target_Duration
+				}
+			}else{
+				if self.option.Target_Duration < 1 {
+					index = (segtime.Minute()*60+segtime.Second())/int(msg._target_duration)
+				}else{
+					index = (segtime.Minute()*60+segtime.Second())/self.option.Target_Duration
+				}
+			}
+		}
 		log.Debugln("Recording segment:> ", msg.segment, msg.seg_buffer.Len())
 		fname, e := self.generateFilename(self.option.Record.Output, self.option.Record.Segment_Rewrite, msg.segment.ProgramDateTime, index)
 		log.Debugf("New filename:> %s <%s> \n", fname, e)
@@ -127,9 +144,8 @@ func (self *Synchronizer) recordProc(msgChan chan *RecordMessage) {
 		}
 		out.Close()
 		last_seg_timestamp = msg.segment.ProgramDateTime
+		last_seg_duration = time.Duration(msg.segment.Duration)
 		index++
-		//msg.segment.URI = filepath.Base(fname)
-		//index_playlist.AppendSegment(msg.segment)
 		seg := m3u8.MediaSegment{
 			URI: filepath.Base(fname),
 			Duration: msg.segment.Duration,
