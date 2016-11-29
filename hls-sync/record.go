@@ -70,8 +70,10 @@ func (self *Synchronizer) recordProc(msgChan chan *RecordMessage) {
 				}else{
 					index = segtime.Second()/self.option.Target_Duration
 				}
-				index_playlist.Close()
-				self.saveIndexPlaylist(index_playlist)
+				if index_playlist != nil {
+					index_playlist.Close()
+					self.saveIndexPlaylist(index_playlist)
+				}
 				index_playlist, e = m3u8.NewMediaPlaylist(128, 128)
 				if nil != e {
 					log.Errorln("Create playlist failed:>", e)
@@ -93,8 +95,10 @@ func (self *Synchronizer) recordProc(msgChan chan *RecordMessage) {
 				}else{
 					index = (segtime.Minute()*60+segtime.Second())/self.option.Target_Duration
 				}
-				index_playlist.Close()
-				self.saveIndexPlaylist(index_playlist)
+				if index_playlist != nil {
+					index_playlist.Close()
+					self.saveIndexPlaylist(index_playlist)
+				}
 				index_playlist, e = m3u8.NewMediaPlaylist(2048, 2048)
 				if nil != e {
 					log.Errorln("Create playlist failed:>", e)
