@@ -258,6 +258,7 @@ func (self *Synchronizer) segmentProc(segmentChan chan *SegmentMessage, syncChan
 					le_msg.seg_buffer = bytes.NewBuffer(bufdata)
 					recordChan <- le_msg
 				}
+				break // It's done, boy!!!
 			}
 		}
 	}
