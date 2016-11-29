@@ -14,47 +14,95 @@ Sync hls live stream to local disk.
 You can run with several URL as failover mechanism. `hls-sync` the first one and than the second one if there's a failure.
 
 ### Options:
+#### Control Options
+  - `c` string
+        Configuration file instead of command line parameters. Default empty means using parameters.
+  - `C `   Check options.
+       
+#### Global Options
 
-- `c` string
-    Configuration file instead of command line parameters. Default empty means using parameters.
-    See "Configuration Example" for detail.
-- `O` string
-    Output path. A base path for storage segments and play list.
-- `SR` string
-    Segment filename rewrite rule. Default empty means simply copy.
-    For example: "%Y/%m/%d/%H/live-%04d.ts"
-- `TZ` int
-    Timezone shift. Default 0.
-- `L` string
-    Logging output file. Default 'stdout'.
-- `LV` string
-    Logging level. Default 'INFO'.
-- `SP` bool
-    Save play list file. Default false.
-- `TO` int
-    Request timeout. Default 5.
-- `R` int
-    Retries. Default 1.
-- `UA` string
-    User Agent. Default 'hls-sync v${VERSION}'.
-- `UL` bool
-    Use local timestamp.
-- `US` bool
-    Use segment timestamp.
-- `ST` string
-    Segment timestamp format.
-- `RM` bool
-    Remove old segments.
+  - `L` string
+        Logging output file. Default 'stdout'.
+  - `MS` int
+        Max segments in playlist. (default 20)
+  - `R` int
+          Retries. (default 1)
+  - `T` int
+        Request timeout.  (default 5)
+  - `TD` int
+        Target duration of source. Real target duration will be used when set to 0.
+  - `TS` int
+        Timezone shifting by minutes when timestamp is not matching local timezone.
+  - `TT` string
+        Timestamp type: local, program, segment. (default "program")
+  - `UA` string
+        User Agent.  (default "hls-sync v0.2.0")
+  - `V` string
+        Logging level.  (default "INFO")
 
-### Example
+#### Sync Options
+  - `S`
+        Sync enabled.
+  - `SO` string
+        A base path for synced segments and play list. (default ".")
+  - `OI` string
+        Index playlist filename. (default "live.m3u8")
+  - `RM`
+        Remove old segments.
+
+#### Record Options
+  - `RC`
+        Record enabled.
+  - `RB` string
+        Re-index by 'hour' or 'minute'. (default "hour")
+  - `RF` string
+        Re-index M3U8 filename format. (default "%Y/%m/%d/%H/index.m3u8")
+  - `RI`
+        Re-index playlist when recording.
+  - `RO` string
+        Record output path. (default ".")
+  - `SR` string
+        Segment filename rewrite rule. Default empty means simply copy. (default "%Y/%m/%d/%H/live-#:04.ts")
+  - `TF` string
+        Timestamp format when using timestamp type as 'segment'.
+
+
+## Example
 
 ### Record stream:
-    ./hls-sync -O /tmp/channel1 -SR '%Y/%m/%d/%H/live-%04d.ts' -RS -RD 10 -LV DEBUG -UL http://live1.example.com/chan01/live.m3u8 http://live2.example.com/chan01/live.m3u8
+    ./hls-sync -TT local -MS 10 -TD 5 -V DEBUG -RC -RO /tmp/channel1 -SR '%Y/%m/%d/%H/live-%04d.ts' -RI -RF '%Y/%m/%d/%H/index.m3u8' http://live1.example.com/chan01/live.m3u8 http://live2.example.com/chan01/live.m3u8
 
 ### Sync stream only:
-    ./hls-sync -O /tmp/channel1 -SP -RM -LV DEBUG http://live1.example.com/chan01/live.m3u8 http://live2.example.com/chan01/live.m3u8    
+    ./hls-sync  -TT local -MS 10 -TD 5 -V DEBUG -S -SO /tmp/channel1 -RM -OI 'live.m3u8' http://live1.example.com/chan01/live.m3u8 http://live2.example.com/chan01/live.m3u8    
     
-## Configuration Example
-
+### Configuration Example
+    ./hls-sync -c hls-sync.toml.example
 `hls-sync` use a TOML configuration file. Please check the following example:
+```
+log_file = ""
+log_level = "DEBUG"
+timeout = 10
+retries = 3
+user_agent = "HLS-SYNC"
+timestamp_type="program"
+timestamp_format=""
+timezone_shift=0
+target_duration=5
+
+[source]
+urls=["http://live1.example.com/chan01/live.m3u8"]
+
+[sync]
+enabled=true
+output="./"
+remove_old=true
+
+[record]
+enabled=true
+output="."
+segment_rewrite="%Y/%m/%d/%H/live-#:04.ts"
+reindex=true
+reindex_by="hour"
+reindex_format="%Y/%m/%d/%H/index.m3u8"
+```
 
