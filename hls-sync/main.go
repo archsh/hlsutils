@@ -120,7 +120,7 @@ func main() {
 		}
 	}else{
 		if flag.NArg() < 1 {
-			os.Stderr.Write([]byte("!!! At least one source URL is required!\n"))
+			os.Stderr.Write([]byte("\n\n!!! At least one source URL is required!\n"))
 			Usage()
 			os.Exit(1)
 		}else{
