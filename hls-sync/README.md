@@ -72,6 +72,25 @@ You can run with several URL as failover mechanism. `hls-sync` the first one and
   - `TF` string
         Timestamp format when using timestamp type as 'segment'.
 
+#### HTTP Options
+Using HTTP interface to provide time shifting playlist access for some situation.
+  - `H`	Enable HTTP service for time shifting playlist.
+  - `LS` string
+    	HTTP listening address. support tcp:// or unix:// (default "unix://./hls-sync.sock")
+  - `MX` int
+    	Max length of playlist in hours. (default 6)
+  - `SD` int
+    	Max time shifting days for playlist. (default 7)
+
+**HTTP Interfaces:**
+
+  - `GET /?playlist={start-timestamp}_{end-timestamp}.m3u8`
+    eg: /?playlist=1479998100_1480004640.m3u8
+  -	`GET /?start={start-timestamp}&duration={duration-in-seconds}`
+    eg: /?start=1479998100&duration=6540
+  - `GET /?start={start-timestamp}&end={end-timestamp}`
+    eg: /?start=1479998100&end=1480004640
+
 
 ## Example
 
@@ -110,5 +129,11 @@ segment_rewrite="%Y/%m/%d/%H/live-#:04.ts"
 reindex=true
 reindex_by="hour"
 reindex_format="%Y/%m/%d/%H/index.m3u8"
+
+[http]
+enabled=true
+listen="unix://./hlssync.sock"
+days=7
+max=4
 ```
 
