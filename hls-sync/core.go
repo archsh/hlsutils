@@ -128,13 +128,14 @@ func (self *Synchronizer) playlistProc(segmentChan chan *SegmentMessage) {
 		resp.Body.Close()
 		mpl_updated := false
 		lastTimestamp := time.Now()
+		seg_num := 0
 		if listType == m3u8.MEDIA {
 			mpl := playlist.(*m3u8.MediaPlaylist)
-			//log.Debugln("Get playlist , segments = ", len(mpl.Segments))
 			retry = 0
 			for _, v := range mpl.Segments {
 				if v != nil {
 					//log.Debugln("Segment:> ", v.URI, v.ProgramDateTime)
+					seg_num ++
 					t, hit := cache.Get(v.URI)
 					if !hit {
 						if timestamp_type == TST_SEGMENT {
@@ -175,7 +176,7 @@ func (self *Synchronizer) playlistProc(segmentChan chan *SegmentMessage) {
 					}
 				}
 			}
-			if time.Now().Sub(last_new_segment) >= time.Duration(mpl.TargetDuration*2) * time.Second {
+			if time.Now().Sub(last_new_segment) >= time.Duration(mpl.TargetDuration) * time.Second * time.Duration(seg_num) {
 				log.Warningf("Long time without new segment, please check stream continuity. [ %s -> %s ] \n", last_new_segment, time.Now())
 			}
 			if self.option.Sync.Enabled && mpl_updated {
