@@ -85,9 +85,8 @@ func (self *Synchronizer) playlistProc(segmentChan chan *SegmentMessage) {
 	default:
 		timestamp_type = TST_PROGRAM
 	}
-	//log.Debugln("Timestamp Type:", timestamp_type)
-	//log.Debugln("Timezone Shift:", timezone_shift)
 	src_idx := 0
+	last_new_segment := time.Now()
 	for {
 		if retry >= self.option.Retries {
 			if len(self.option.Source.Urls) > (src_idx+1) {
@@ -148,6 +147,7 @@ func (self *Synchronizer) playlistProc(segmentChan chan *SegmentMessage) {
 							v.ProgramDateTime = v.ProgramDateTime.Add(timezone_shift)
 						}
 						cache.Add(v.URI, v.ProgramDateTime)
+						last_new_segment = time.Now()
 						log.Infoln("New segment:> ", mpl.SeqNo, v.URI, v.Duration, v.SeqId, v.ProgramDateTime)
 						if self.option.Sync.Enabled || self.option.Record.Enabled {
 							// Only get segments when sync or record enabled.
@@ -175,6 +175,9 @@ func (self *Synchronizer) playlistProc(segmentChan chan *SegmentMessage) {
 					}
 				}
 			}
+			if time.Now().Sub(last_new_segment) >= time.Duration(mpl.TargetDuration*2) * time.Second {
+				log.Warningf("Long time without new segment, please check stream continuity. [ %s -> %s ] \n", last_new_segment, time.Now())
+			}
 			if self.option.Sync.Enabled && mpl_updated {
 				msg := &SegmentMessage{}
 				msg._type = PLAYLIST
@@ -195,6 +198,8 @@ func (self *Synchronizer) playlistProc(segmentChan chan *SegmentMessage) {
 			retry ++
 		}
 	}
+	// Close segment message channel.
+	close(segmentChan)
 }
 
 
@@ -271,6 +276,9 @@ func (self *Synchronizer) segmentProc(segmentChan chan *SegmentMessage, syncChan
 			}
 		}
 	}
+	// Close following channels.
+	close(recordChan)
+	close(syncChan)
 }
 
 
