@@ -15,9 +15,9 @@ import (
 	"fmt"
 	"regexp"
 	"github.com/archsh/m3u8"
-	"github.com/kataras/go-errors"
 	"net"
 	"strings"
+	"errors"
 )
 
 
@@ -116,6 +116,5 @@ func (self *Synchronizer) ServeHTTP(response http.ResponseWriter, request *http.
 }
 
 func (self *Synchronizer) buildPlaylist(start time.Time, end time.Time) (*m3u8.MediaPlaylist, error) {
-
 	return nil, errors.New("Not implemented!")
 }
