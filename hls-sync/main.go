@@ -79,7 +79,7 @@ func main() {
 	//Index_Name string
 	flag.StringVar(&option.Sync.Index_Name, "OI", "live.m3u8", "Index playlist filename.")
 	//Remove_Old bool
-	flag.BoolVar(&option.Sync.Remove_Old, "RM", false, "Remove old segments.")
+	flag.BoolVar(&option.Sync.Remove_Old, "RM", true, "Remove old segments.")
 	// Record Arguments ================================================================================================
 	//Enabled bool
 	flag.BoolVar(&option.Record.Enabled, "RC", false, "Record enabled.")
@@ -111,7 +111,6 @@ func main() {
 	flag.BoolVar(&showVersion, "v", false, "Display version info.")
 	flag.Parse()
 
-
 	if showVersion {
 		os.Stderr.Write([]byte(fmt.Sprintf("hls-sync v%v\n", VERSION)))
 		os.Exit(0)
@@ -119,7 +118,6 @@ func main() {
 	os.Stderr.Write([]byte(fmt.Sprintf("hls-sync v%v - HTTP Live Streaming (HLS) Synchronizer.\n", VERSION)))
 	os.Stderr.Write([]byte("Copyright (C) 2015 Mingcai SHEN <archsh@gmail.com>. Licensed for use under the GNU GPL version 3.\n"))
 	if config != "" {
-
 		if e := LoadConfiguration(config, &option); e != nil {
 			os.Stderr.Write([]byte(fmt.Sprintf("Load config<%s> failed: %s.\n", config, e)))
 			os.Exit(1)
