@@ -1,3 +1,6 @@
+/**
+	This source file defines the config options.
+ */
 package main
 
 import (
