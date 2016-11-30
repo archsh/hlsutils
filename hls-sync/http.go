@@ -53,7 +53,7 @@ func (self *Synchronizer) ServeHTTP(response http.ResponseWriter, request *http.
 	end := request.URL.Query().Get("end")
 	var _start_time, _end_time time.Time
 	if playlist != "" {
-		re := regexp.MustCompile("([0-9]+)_([0-9]+).m3u8")
+		re := regexp.MustCompile("([0-9]+)[-_]([0-9]+).m3u8")
 		if !re.MatchString(playlist) {
 			_bad_request(fmt.Sprintf("Invalid playlist name format : %s \n",playlist))
 			return
