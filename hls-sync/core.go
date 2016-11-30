@@ -1,3 +1,6 @@
+/**
+	This source file contains the playlist updating and segments downloading.
+ */
 package main
 
 import (

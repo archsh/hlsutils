@@ -1,3 +1,6 @@
+/**
+	This source file contains the sync process.
+ */
 package main
 
 import (

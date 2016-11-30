@@ -1,3 +1,6 @@
+/**
+	This source file contains the recording process.
+ */
 package main
 
 import (
