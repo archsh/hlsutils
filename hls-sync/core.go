@@ -39,12 +39,6 @@ func NewSynchronizer(option *Option) (*Synchronizer, error) {
 	synchronizer := new(Synchronizer)
 	synchronizer.option = option
 	synchronizer.client = &http.Client{}
-	if synchronizer.option.Retries < 1 {
-		synchronizer.option.Retries = 1
-	}
-	if synchronizer.option.Program_Time_Format == "" {
-		synchronizer.option.Program_Time_Format = time.RFC3339Nano
-	}
 	return synchronizer, nil
 }
 
@@ -65,24 +59,26 @@ func (self *Synchronizer) Run() {
 		self.segmentProc(segmentChan, syncChan, recordChan)
 		wg.Done()
 	}()
-	wg.Add(1)
-	go func(){
-		self.syncProc(syncChan)
-		wg.Done()
-	}()
-	wg.Add(1)
-	go func(){
-		self.recordProc(recordChan)
-		wg.Done()
-	}()
-	wg.Add(1)
+	if self.option.Sync.Enabled {
+		wg.Add(1)
+		go func(){
+			self.syncProc(syncChan)
+			wg.Done()
+		}()
+	}
+	if self.option.Record.Enabled {
+		wg.Add(1)
+		go func(){
+			self.recordProc(recordChan)
+			wg.Done()
+		}()
+	}
 	if self.option.Http.Enabled {
 		wg.Add(1)
 		go func(){
 			self.HttpServe()
 			wg.Done()
 		}()
-
 	}
 	wg.Wait()
 }

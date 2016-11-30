@@ -5,6 +5,7 @@ package main
 
 import (
 	"github.com/BurntSushi/toml"
+	"io"
 )
 
 type SyncOption struct {
@@ -58,6 +59,21 @@ type Option struct {
 	Source       SourceOption
 	// Http Service
 	Http        HttpOption
+}
+
+func CheckConfiguration(option *Option, output io.Writer) {
+	var _print = func (s string) {
+		io.WriteString(output, s)
+	}
+	_print("Checking options ...\n")
+	if nil == option {
+		_print("Invalid configuration!!!\n")
+		return
+	}
+	_print("\n")
+	_print("!!!!!!!!!!!!!!!TBD!!!!!!!!!!!!!!!!\n")
+	_print("\n")
+	_print("Configration validated!\n")
 }
 
 func LoadConfiguration(filename string, option *Option) (e error) {

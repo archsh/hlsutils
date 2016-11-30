@@ -130,7 +130,7 @@ func main() {
 			option.Source.Urls = append(option.Source.Urls, flag.Args()...)
 		}
 	}else{
-		if flag.NArg() < 1 {
+		if flag.NArg() < 1 && !check {
 			os.Stderr.Write([]byte("\n\n!!! At least one source URL is required!\n"))
 			Usage()
 			os.Exit(1)
@@ -139,9 +139,14 @@ func main() {
 		}
 	}
 	if check {
-		os.Stderr.Write([]byte(fmt.Sprint("Checking options ...\n")))
-		os.Stderr.Write([]byte(fmt.Sprintf("Options> \n %+v \n", option)))
+		CheckConfiguration(&option, os.Stderr)
 		os.Exit(0)
+	}
+	if option.Retries < 1 {
+		option.Retries = 1
+	}
+	if option.Program_Time_Format == "" {
+		option.Program_Time_Format = time.RFC3339Nano
 	}
 
 	logging_config.Filename = option.Log_File
@@ -152,7 +157,7 @@ func main() {
 		logging.InitializeLogging(&logging_config, true, logging_config.Level)
 	}
 	defer logging.DeinitializeLogging()
-	//os.Stderr.Write([]byte(fmt.Sprintf(" %v \n", option)))
+
 	if sync, e := NewSynchronizer(&option); e != nil {
 		os.Stderr.Write([]byte(fmt.Sprintf("Start failed: %s.\n", e)))
 		os.Exit(1)
