@@ -55,23 +55,35 @@ func (self *Synchronizer) Run() {
 	segmentChan := make(chan *SegmentMessage, 20)
 	m3u8.ProgramTimeFormat = self.option.Program_Time_Format
 	var wg sync.WaitGroup
-	wg.Add(4)
+	wg.Add(1)
 	go func(){
 		self.playlistProc(segmentChan)
 		wg.Done()
 	}()
+	wg.Add(1)
 	go func(){
 		self.segmentProc(segmentChan, syncChan, recordChan)
 		wg.Done()
 	}()
+	wg.Add(1)
 	go func(){
 		self.syncProc(syncChan)
 		wg.Done()
 	}()
+	wg.Add(1)
 	go func(){
 		self.recordProc(recordChan)
 		wg.Done()
 	}()
+	wg.Add(1)
+	if self.option.Http.Enabled {
+		wg.Add(1)
+		go func(){
+			self.HttpServe()
+			wg.Done()
+		}()
+
+	}
 	wg.Wait()
 }
 

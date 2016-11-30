@@ -30,6 +30,13 @@ type SourceOption struct {
 	Urls []string
 }
 
+type HttpOption struct {
+	Enabled bool
+	Listen  string   // eg:  tcp://0.0.0.0:8080  or  unix:///tmp/test.sock
+	Days    int      // Max shifting days.
+	Max     int      // Max length of playlist in minutes.
+}
+
 type Option struct {
 	// Global Options --------------------------------
 	Log_File     string
@@ -49,6 +56,8 @@ type Option struct {
 	Record       RecordOption
 	// Source URLs.
 	Source       SourceOption
+	// Http Service
+	Http        HttpOption
 }
 
 func LoadConfiguration(filename string, option *Option) (e error) {

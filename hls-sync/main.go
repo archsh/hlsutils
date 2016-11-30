@@ -26,7 +26,7 @@ import (
 	"time"
 )
 
-const VERSION = "0.9.6"
+const VERSION = "0.9.7-dev"
 
 var logging_config = logging.LoggingConfig{Format:logging.DEFAULT_FORMAT, Level:"DEBUG"}
 
@@ -93,6 +93,15 @@ func main() {
 	flag.StringVar(&option.Record.Reindex_Format, "RF", "%Y/%m/%d/%H/index.m3u8", "Re-index M3U8 filename format.")
 	//Reindex_By string // hour/minute
 	flag.StringVar(&option.Record.Reindex_By, "RB", "hour", "Re-index by 'hour' or 'minute'.")
+	// HTTP Service Arguments ==========================================================================================
+	// Enabled bool
+	flag.BoolVar(&option.Http.Enabled, "H", false, "Enable HTTP service for time shifting playlist.")
+	// Listen string
+	flag.StringVar(&option.Http.Listen, "LS", "unix://./hls-sync.sock", "HTTP listening address. support tcp:// or unix://")
+	// Days int
+	flag.IntVar(&option.Http.Days, "SD", 7, "Max time shifting days for playlist.")
+	// Max int
+	flag.IntVar(&option.Http.Max, "MX", 6, "Max length of playlist in hours.")
 	// Functional Arguments ============================================================================================
 	var config string
 	flag.StringVar(&config, "c", "", "Configuration file instead of command line parameters. Default empty means using parameters.")
