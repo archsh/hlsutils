@@ -73,19 +73,21 @@ func (self *Synchronizer) recordProc(msgChan chan *RecordMessage) {
 				}else{
 					index = segtime.Second()/self.option.Target_Duration
 				}
-				if index_playlist != nil {
-					index_playlist.Close()
-					self.saveIndexPlaylist(index_playlist)
-				}
-				index_playlist, e = m3u8.NewMediaPlaylist(128, 128)
-				if nil != e {
-					log.Errorln("Create playlist failed:>", e)
-					continue
-				}
-				if self.option.Target_Duration < 1 {
-					index_playlist.TargetDuration = msg._target_duration
-				}else{
-					index_playlist.TargetDuration = float64(self.option.Target_Duration)
+				if self.option.Record.Reindex {
+					if index_playlist != nil {
+						index_playlist.Close()
+						self.saveIndexPlaylist(index_playlist)
+					}
+					index_playlist, e = m3u8.NewMediaPlaylist(128, 128)
+					if nil != e {
+						log.Errorln("Create playlist failed:>", e)
+						continue
+					}
+					if self.option.Target_Duration < 1 {
+						index_playlist.TargetDuration = msg._target_duration
+					}else{
+						index_playlist.TargetDuration = float64(self.option.Target_Duration)
+					}
 				}
 			}
 		}else{
@@ -98,19 +100,21 @@ func (self *Synchronizer) recordProc(msgChan chan *RecordMessage) {
 				}else{
 					index = (segtime.Minute()*60+segtime.Second())/self.option.Target_Duration
 				}
-				if index_playlist != nil {
-					index_playlist.Close()
-					self.saveIndexPlaylist(index_playlist)
-				}
-				index_playlist, e = m3u8.NewMediaPlaylist(2048, 2048)
-				if nil != e {
-					log.Errorln("Create playlist failed:>", e)
-					continue
-				}
-				if self.option.Target_Duration < 1 {
-					index_playlist.TargetDuration = msg._target_duration
-				}else{
-					index_playlist.TargetDuration = float64(self.option.Target_Duration)
+				if self.option.Record.Reindex {
+					if index_playlist != nil {
+						index_playlist.Close()
+						self.saveIndexPlaylist(index_playlist)
+					}
+					index_playlist, e = m3u8.NewMediaPlaylist(2048, 2048)
+					if nil != e {
+						log.Errorln("Create playlist failed:>", e)
+						continue
+					}
+					if self.option.Target_Duration < 1 {
+						index_playlist.TargetDuration = msg._target_duration
+					}else{
+						index_playlist.TargetDuration = float64(self.option.Target_Duration)
+					}
 				}
 			}
 		}
@@ -155,14 +159,16 @@ func (self *Synchronizer) recordProc(msgChan chan *RecordMessage) {
 		last_seg_timestamp = msg.segment.ProgramDateTime
 		last_seg_duration = time.Duration(msg.segment.Duration)
 		index++
-		seg := m3u8.MediaSegment{
-			URI: filepath.Base(fname),
-			Duration: msg.segment.Duration,
-			ProgramDateTime: msg.segment.ProgramDateTime,
-			Title: msg.segment.URI,
+		if self.option.Record.Reindex {
+			seg := m3u8.MediaSegment{
+				URI: filepath.Base(fname),
+				Duration: msg.segment.Duration,
+				ProgramDateTime: msg.segment.ProgramDateTime,
+				Title: msg.segment.URI,
+			}
+			index_playlist.AppendSegment(&seg)
+			self.saveIndexPlaylist(index_playlist)
 		}
-		index_playlist.AppendSegment(&seg)
-		self.saveIndexPlaylist(index_playlist)
 	}
 }
 
