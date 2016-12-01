@@ -45,6 +45,8 @@ You can run with several URL as failover mechanism. `hls-sync` the first one and
   - `PF` string
         To fit some stupid encoders which generated stupid time format. (default "2006-01-02T15:04:05.999999999Z07:00")
         eg: set it to "2006-01-02T15:04:05z" if you have something like: "#EXT-X-PROGRAM-DATE-TIME:2016-11-29T17:55:02z"
+  - `PZ` string
+        Timezone for PROGRAM-DATE-TIME. Default is 'UTC'.
 
 #### Sync Options
   - `S`
@@ -73,7 +75,7 @@ You can run with several URL as failover mechanism. `hls-sync` the first one and
         Timestamp format when using timestamp type as 'segment'.
 
 #### HTTP Options
-Using HTTP interface to provide time shifting playlist access for some situation.
+Using HTTP interface to provide time shifting playlist access for some situation. To use this feature, recording and re-indexing should enabled.
   - `H`	Enable HTTP service for time shifting playlist.
   - `LS` string
     	HTTP listening address. support tcp:// or unix:// (default "unix://./hls-sync.sock")
@@ -81,6 +83,12 @@ Using HTTP interface to provide time shifting playlist access for some situation
     	Max length of playlist in hours. (default 6)
   - `SD` int
     	Max time shifting days for playlist. (default 7)
+  - `SP` string
+        Segment prefix when generating playlist.
+  - `CN` int
+        Num of Cache entries for avoid re-generating playlist. Default is 128.
+  - `CV` int
+        Cache valid duration in seconds. Default is 60.
 
 **HTTP Interfaces:**
 

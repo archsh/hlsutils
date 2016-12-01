@@ -26,7 +26,7 @@ import (
 	"time"
 )
 
-const VERSION = "0.9.9"
+const VERSION = "0.9.10"
 
 var logging_config = logging.LoggingConfig{Format:logging.DEFAULT_FORMAT, Level:"DEBUG"}
 
@@ -71,6 +71,8 @@ func main() {
 	flag.IntVar(&option.Target_Duration, "TD", 0, "Target duration of source. Real target duration will be used when set to 0.")
 	//Program_Time_Format string
 	flag.StringVar(&option.Program_Time_Format, "PF", time.RFC3339Nano, "To fit some stupid encoders which generated stupid time format.")
+	//Program_Timezone string
+	flag.StringVar(&option.Program_Timezone, "PZ", "UTC", "Timezone for PROGRAM-DATE-TIME.")
 	// Sync Arguments ==================================================================================================
 	//Enabled bool
 	flag.BoolVar(&option.Sync.Enabled, "S", false, "Sync enabled.")
@@ -102,6 +104,12 @@ func main() {
 	flag.IntVar(&option.Http.Days, "SD", 7, "Max time shifting days for playlist.")
 	// Max int
 	flag.IntVar(&option.Http.Max, "MX", 6, "Max length of playlist in hours.")
+	// Segment_Prefix string
+	flag.StringVar(&option.Http.Segment_Prefix, "SP", "", "Segment prefix when generating playlist.")
+	// Cache_Num int
+	flag.IntVar(&option.Http.Cache_Num, "CN", 128, "Num of Cache entries for avoid re-generating playlist.")
+	// Cache_Valid int
+	flag.IntVar(&option.Http.Cache_Valid, "CV", 60, "Cache valid duration in seconds.")
 	// Functional Arguments ============================================================================================
 	var config string
 	flag.StringVar(&config, "c", "", "Configuration file instead of command line parameters. Default empty means using parameters.")

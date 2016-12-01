@@ -37,6 +37,9 @@ type HttpOption struct {
 	Listen  string   // eg:  tcp://0.0.0.0:8080  or  unix:///tmp/test.sock
 	Days    int      // Max shifting days.
 	Max     int      // Max length of playlist in minutes.
+	Segment_Prefix string // Segment prefix when generating playlist.
+	Cache_Num   int      // Num of Cache entries for avoid re-generating playlist.
+	Cache_Valid int     // Cache valid duration in seconds.
 }
 
 type Option struct {
@@ -52,6 +55,7 @@ type Option struct {
 	Timezone_shift   int
 	Target_Duration  int
 	Program_Time_Format string
+	Program_Timezone string
 	// Sync Option
 	Sync         SyncOption
 	// Record Option
@@ -83,6 +87,7 @@ func CheckConfiguration(option *Option, output io.Writer) {
 	_print(fmt.Sprintf("Timezone_shift: %d\n", option.Timezone_shift))
 	_print(fmt.Sprintf("Target_Duration: %d\n", option.Target_Duration))
 	_print(fmt.Sprintf("Program_Time_Format: %s\n", option.Program_Time_Format))
+	_print(fmt.Sprintf("Program_Timezone: %s\n", option.Program_Timezone))
 
 	_print("\nSync Options:\n")
 	_print(fmt.Sprintf("Enabled: %t\n", option.Sync.Enabled))
@@ -103,6 +108,9 @@ func CheckConfiguration(option *Option, output io.Writer) {
 	_print(fmt.Sprintf("Listen: %s\n", option.Http.Listen))
 	_print(fmt.Sprintf("Days: %d\n", option.Http.Days))
 	_print(fmt.Sprintf("Max: %d\n", option.Http.Max))
+	_print(fmt.Sprintf("Segment_Prefix: %s\n", option.Http.Segment_Prefix))
+	_print(fmt.Sprintf("Cache_Num: %d\n", option.Http.Cache_Num))
+	_print(fmt.Sprintf("Cache_Valid: %d\n", option.Http.Cache_Valid))
 	_print("\n")
 	_print("Configration validated!\n")
 }

@@ -16,11 +16,14 @@ import (
 	"strings"
 	"net/url"
 	"github.com/archsh/timefmt"
+	"os"
 )
 
 type Synchronizer struct {
 	option *Option
 	client *http.Client
+	program_timezone *time.Location
+	httpCache *lru.Cache
 }
 
 type SegmentMessage struct {
@@ -32,14 +35,17 @@ type SegmentMessage struct {
 	response *http.Response
 }
 
-func NewSynchronizer(option *Option) (*Synchronizer, error) {
+func NewSynchronizer(option *Option) (s *Synchronizer, e error) {
 	if len(option.Source.Urls) < 1 {
 		return nil, errors.New("\n\n!!! At least one source URL is required!\n\n")
 	}
-	synchronizer := new(Synchronizer)
-	synchronizer.option = option
-	synchronizer.client = &http.Client{}
-	return synchronizer, nil
+	s = new(Synchronizer)
+	s.option = option
+	s.client = &http.Client{}
+	if s.program_timezone, e = time.LoadLocation(option.Program_Timezone); nil != e {
+		return nil, e
+	}
+	return s, nil
 }
 
 func (self *Synchronizer) Run() {
@@ -48,6 +54,13 @@ func (self *Synchronizer) Run() {
 	recordChan := make(chan *RecordMessage, 20)
 	segmentChan := make(chan *SegmentMessage, 20)
 	m3u8.ProgramTimeFormat = self.option.Program_Time_Format
+	m3u8.ProgramTimeLocation = self.program_timezone
+	if self.option.Http.Enabled {
+		if !self.option.Record.Enabled || !self.option.Record.Reindex {
+			os.Stderr.Write([]byte("\n\n!!! Record(-RC) and Re-index(-RI) should enabled to enable HTTP service !\n"))
+			os.Exit(1)
+		}
+	}
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func(){

@@ -17,8 +17,16 @@ import (
 	"github.com/archsh/m3u8"
 	"net"
 	"strings"
-	"errors"
+	"os"
+	"path/filepath"
+	"bytes"
+	"github.com/golang/groupcache/lru"
 )
+
+type CacheItem struct {
+	_timestamp time.Time
+	_content   []byte
+}
 
 
 func (self *Synchronizer) HttpServe() {
@@ -31,6 +39,7 @@ func (self *Synchronizer) HttpServe() {
 	if nil != err {
 		log.Errorln("Listen to socket failed:> ", err)
 	}
+	self.httpCache = lru.New(self.option.Http.Cache_Num)
 	e := http.Serve(ln, self)
 	log.Errorln("HTTP serve failed:> ", e)
 }
@@ -103,19 +112,82 @@ func (self *Synchronizer) ServeHTTP(response http.ResponseWriter, request *http.
 		return
 	}
 	log.Infof("Request Playlist %s -> %s \n", _start_time, _end_time)
-
+	c_key := fmt.Sprintf("%d-%d", _start_time.Unix(), _end_time.Unix())
+	if v, ok := self.httpCache.Get(c_key); ok {
+		log.Debugln("Cached: ", c_key)
+		if item, yes := v.(CacheItem); yes {
+			if item._timestamp.Add(time.Duration(self.option.Http.Cache_Valid)*time.Second).After(time.Now()) {
+				response.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
+				response.Header().Set("Content-Length", fmt.Sprintf("%d",len(item._content)))
+				response.Write(item._content)
+				return
+			}
+		}
+	}
 	if mpl, e := self.buildPlaylist(_start_time, _end_time); e != nil {
 		log.Debugf("Build playlist failed:> %s", e)
 		response.WriteHeader(500)
 		response.Header().Set("Content-Type", "text/plain")
 		response.Write([]byte(fmt.Sprintf("Build playlist failed:> %s", e)))
+		return
 	}else{
+		buf := &bytes.Buffer{}
+		mpl.Encode().WriteTo(buf)
+		pbytes := buf.Bytes()
 		response.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
-		mpl.Encode().WriteTo(response)
+		response.Header().Set("Content-Length", fmt.Sprintf("%d",len(pbytes)))
+		response.Write(pbytes)
+		self.httpCache.Add(c_key, CacheItem{_timestamp:time.Now(), _content:pbytes})
 	}
 }
 
 func (self *Synchronizer) buildPlaylist(start time.Time, end time.Time) (*m3u8.MediaPlaylist, error) {
-	return nil, errors.New("Not implemented!")
+	var duration time.Duration
+	if strings.ToLower(self.option.Record.Reindex_By) == "minute" {
+		duration = time.Minute
+	} else {
+		duration = time.Hour
+	}
+	mpl, e := m3u8.NewMediaPlaylist(2048,2048)
+	if  nil != e {
+		log.Errorf("Create MediaPlaylist failed:> %s\n", e)
+		return nil, e
+	}
+	for t := start.Truncate(duration); t.Before(end); t = t.Add(duration) {
+		log.Debugln("T:>", t)
+		if index_filename, e := self.generateFilename(self.option.Record.Output, self.option.Record.Reindex_Format, t, 0); nil != e {
+			log.Errorf("Generate filename failed:> %s \n", e)
+			continue
+		}else{
+			rl_idx, _ := self.generateFilename(self.option.Http.Segment_Prefix, self.option.Record.Reindex_Format, t, 0)
+			rl_path := filepath.Dir(rl_idx)
+			fp, e := os.Open(index_filename)
+			if nil != e {
+				log.Errorf("Open index file '%s' failed:> %s \n", index_filename, e)
+				continue
+			}
+			l, t, e := m3u8.DecodeFrom(fp, true)
+			fp.Close()
+			if nil != e || t != m3u8.MEDIA {
+				log.Errorf("Decode index file '%s' failed:> %s \n", index_filename, e)
+				continue
+			}
+			index_mpl := l.(*m3u8.MediaPlaylist)
+			for _, seg := range index_mpl.Segments {
+				if nil == seg {
+					continue
+				}
+				if seg.ProgramDateTime.Before(start) || seg.ProgramDateTime.After(end){
+					log.Debugln("Ignored segment: ", seg.URI, seg.ProgramDateTime, start, end, seg.ProgramDateTime.Before(start) , seg.ProgramDateTime.After(end))
+					continue
+				}
+				seg.URI = filepath.ToSlash(filepath.Join(rl_path, seg.URI))
+				mpl.AppendSegment(seg)
+				mpl.TargetDuration = seg.Duration
+			}
+		}
+	}
+	mpl.Close()
+	mpl.SetWinSize(mpl.Count())
+	return mpl, nil
 }
-
