@@ -25,9 +25,9 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-const VERSION = "0.9.13"
+const VERSION = "0.9.14"
 
-var logging_config = logging.LoggingConfig{Format:logging.DEFAULT_FORMAT, Level:"DEBUG"}
+var logging_config = logging.LoggingConfig{Format:logging.DEFAULT_FORMAT, Level:"INFO"}
 
 type RedisConfig struct {
 	Host string
@@ -85,93 +85,69 @@ Options:
  *
  */
 func main() {
+	cfg := new(Configuration)
+
+	///// Control Options ==============================================================================================
 	//c 'config'    - [STRING] Config file instead of the following parameters. Default empty.
 	var config string
 	flag.StringVar(&config, "c", "", "Use a config file instead of the other parameters. Default empty.")
-	//O  'output'     - [STRING] Output directory. Default '.'.
-	var output string
-	flag.StringVar(&output, "O", ".", "Output directory.")
-	//PR 'path_rewrite'    - [STRING] Rewrite output path method. Default empty means simple copy.
-	var path_rewrite string
-	flag.StringVar(&path_rewrite, "PR", "", "Rewrite output path method. Empty means simple copy.")
-	//SR 'segment_rewrite'     - [STRING] Rewrite segment name method. Default empty means simple copy.
-	var segment_rewrite string
-	flag.StringVar(&segment_rewrite, "SR", "", "Rewrite segment name method. Empty means simple copy.")
-	//UA 'user_agent'    - [STRING] UserAgent. Default is 'hls-get' with version num.
-	var user_agent string
-	flag.StringVar(&user_agent, "UA", "hls-get v" + VERSION, "UserAgent.")
-	//L  'log'   - [STRING] Logging output file. Default 'stdout'.
-	var log_file string
-	flag.StringVar(&log_file, "L", "", "Logging output file. Default 'stdout'.")
-	//V 'loglevel' - [STRING] Log level. Default 'INFO'.
-	var log_level string
-	flag.StringVar(&log_level, "V", "INFO", "Logging level. Default 'INFO'.")
-	//R  'retry' - [INTEGER] Retry times if download fails.
-	var retries int
-	flag.IntVar(&retries, "R", 0, "Retry times if download fails.")
-	//S  'skip'  - [BOOL] Skip if exists.
-	var skip bool
-	flag.BoolVar(&skip, "S", false, "Skip if exists.")
-	//M  'mode'  - [STRING] Source mode: redis, mysql. Default empty means source via command args.
-	var mode string
-	flag.StringVar(&mode, "M", "", "Source mode: redis, mysql. Empty means source via command args.")
-	//RD 'redirect'   - [STRING] Redirect server request.
-	var redirect string
-	flag.StringVar(&redirect, "RR", "", "Redirect server request.")
-	//C  'concurrent' - [INTEGER] Concurrent tasks.
-	var concurrent int
-	flag.IntVar(&concurrent, "C", 5, "Concurrent tasks.")
-	//TO 'timeout'    - [INTEGER] Request timeout in seconds.
-	var timeout int
-	flag.IntVar(&timeout, "TO", 20, "Request timeout in seconds.")
-	//TT 'total'      - [INTEGER] Total download links.
-	var total int64
-	flag.Int64Var(&total, "TT", 0, "Total download links.")
-	//
-	//RH 'redis_host'  - [STRING] Redis host.
-	var redis_host string
-	flag.StringVar(&redis_host, "RH", "localhost", "Redis host.")
-	//RP 'redis_port'  - [INTEGER] Redis port.
-	var redis_port int
-	flag.IntVar(&redis_port, "RP", 6379, "Redis port.")
-	//RD 'redis_db'    - [INTEGER] Redis db num.
-	var redis_db int
-	flag.IntVar(&redis_db, "RD", 0, "Redis db num.")
-	//RW 'redis_password'  - [STRING] Redis password.
-	var redis_password string
-	flag.StringVar(&redis_password, "RW", "", "Redis password.")
-	//RK 'redis_key'   - [STRING] List key name in redis.
-	var redis_key string
-	flag.StringVar(&redis_key, "RK", "HLSGET_DOWNLOADS", "List key name in redis.")
-	//RU 'redis_url'   - [STRING] ${redis_host}:${redis_port}/${redis_db}/${redis_key}
-	//var redis_url string
-	//flag.StringVar(&redis_url, "RU", "", "${redis_host}:${redis_port}/${redis_db}/${redis_key}")
-	//
-	//MH 'mysql_host'  - [STRING] MySQL host.
-	var mysql_host string
-	flag.StringVar(&mysql_host, "MH", "localhost", "MySQL host.")
-	//MP 'mysql_port'  - [INTEGER] MySQL port.
-	var mysql_port int
-	flag.IntVar(&mysql_port, "MP", 3306, "MySQL port.")
-	//MN 'mysql_username' - [STRING] MySQL username.
-	var mysql_username string
-	flag.StringVar(&mysql_username, "MN", "root", "MySQL username.")
-	//MW 'mysql_password' - [STRING] MySQL password.
-	var mysql_password string
-	flag.StringVar(&mysql_password, "MW", "", "MySQL password.")
-	//MD 'mysql_db'       - [STRING] MySQL database.
-	var mysql_db string
-	flag.StringVar(&mysql_db, "MD", "hlsgetdb", "MySQL database.")
-	//MT 'mysql_table'    - [STRING] MySQL table.
-	var mysql_table string
-	flag.StringVar(&mysql_table, "MT", "hlsget_downloads", "MySQL table.")
-	var mysql_show_schema bool
-	flag.BoolVar(&mysql_show_schema, "MS", false, "Only show MySQL table schema. Will not do any furthur action if this is set.")
-	//MU 'mysql_url'      - [STRING] ${mysql_username}:${mysql_password}@${mysql_host}:${mysql_port}/${mysql_db}/${mysql_table}
-	//var mysql_url string
-	//flag.StringVar(&mysql_url, "MU", "", "${mysql_username}:${mysql_password}@${mysql_host}:${mysql_port}/${mysql_db}/${mysql_table}")
 	var showVersion bool
 	flag.BoolVar(&showVersion, "v", false, "Display version info.")
+	var mysql_show_schema bool
+	flag.BoolVar(&mysql_show_schema, "MS", false, "Only show MySQL table schema. Will not do any furthur action if this is set.")
+	var checkConfig bool
+	flag.BoolVar(&checkConfig, "C", false, "Check configration only.")
+	///// Global Options ===============================================================================================
+	//O  'output'     - [STRING] Output directory. Default '.'.
+	flag.StringVar(&cfg.Output, "O", ".", "Output directory.")
+	//PR 'path_rewrite'    - [STRING] Rewrite output path method. Default empty means simple copy.
+	flag.StringVar(&cfg.Path_Rewrite, "PR", "", "Rewrite output path method. Empty means simple copy.")
+	//SR 'segment_rewrite'     - [STRING] Rewrite segment name method. Default empty means simple copy.
+	flag.StringVar(&cfg.Segment_Rewrite, "SR", "", "Rewrite segment name method. Empty means simple copy.")
+	//UA 'user_agent'    - [STRING] UserAgent. Default is 'hls-get' with version num.
+	flag.StringVar(&cfg.User_Agent, "UA", "hls-get v" + VERSION, "UserAgent.")
+	//L  'log'   - [STRING] Logging output file. Default 'stdout'.
+	flag.StringVar(&cfg.Log_File, "L", "", "Logging output file. Default 'stdout'.")
+	//V 'loglevel' - [STRING] Log level. Default 'INFO'.
+	flag.StringVar(&cfg.Log_Level, "V", "INFO", "Logging level. Default 'INFO'.")
+	//R  'retry' - [INTEGER] Retry times if download fails.
+	flag.IntVar(&cfg.Retries, "R", 0, "Retry times if download fails.")
+	//S  'skip'  - [BOOL] Skip if exists.
+	flag.BoolVar(&cfg.Skip, "S", false, "Skip if exists.")
+	//M  'mode'  - [STRING] Source mode: redis, mysql. Default empty means source via command args.
+	flag.StringVar(&cfg.Mode, "M", "", "Source mode: redis, mysql. Empty means source via command args.")
+	//RD 'redirect'   - [STRING] Redirect server request.
+	flag.StringVar(&cfg.Redirect, "RR", "", "Redirect server request.")
+	//C  'concurrent' - [INTEGER] Concurrent tasks.
+	flag.IntVar(&cfg.Concurrent, "CO", 5, "Concurrent tasks.")
+	//TO 'timeout'    - [INTEGER] Request timeout in seconds.
+	flag.IntVar(&cfg.Timeout, "TO", 20, "Request timeout in seconds.")
+	//TT 'total'      - [INTEGER] Total download links.
+	flag.Int64Var(&cfg.Total, "TT", 0, "Total download links.")
+	///// Redis Configurations =========================================================================================
+	//RH 'redis_host'  - [STRING] Redis host.
+	flag.StringVar(&cfg.Redis.Host, "RH", "localhost", "Redis host.")
+	//RP 'redis_port'  - [INTEGER] Redis port.
+	flag.IntVar(&cfg.Redis.Port, "RP", 6379, "Redis port.")
+	//RD 'redis_db'    - [INTEGER] Redis db num.
+	flag.IntVar(&cfg.Redis.Db, "RD", 0, "Redis db num.")
+	//RW 'redis_password'  - [STRING] Redis password.
+	flag.StringVar(&cfg.Redis.Password, "RW", "", "Redis password.")
+	//RK 'redis_key'   - [STRING] List key name in redis.
+	flag.StringVar(&cfg.Redis.Key, "RK", "HLSGET_DOWNLOADS", "List key name in redis.")
+	///// MySQL Configurations =========================================================================================
+	//MH 'mysql_host'  - [STRING] MySQL host.
+	flag.StringVar(&cfg.MySQL.Host, "MH", "localhost", "MySQL host.")
+	//MP 'mysql_port'  - [INTEGER] MySQL port.
+	flag.IntVar(&cfg.MySQL.Port, "MP", 3306, "MySQL port.")
+	//MN 'mysql_username' - [STRING] MySQL username.
+	flag.StringVar(&cfg.MySQL.Username, "MN", "root", "MySQL username.")
+	//MW 'mysql_password' - [STRING] MySQL password.
+	flag.StringVar(&cfg.MySQL.Password, "MW", "", "MySQL password.")
+	//MD 'mysql_db'       - [STRING] MySQL database.
+	flag.StringVar(&cfg.MySQL.Db, "MD", "hlsgetdb", "MySQL database.")
+	//MT 'mysql_table'    - [STRING] MySQL table.
+	flag.StringVar(&cfg.MySQL.Table, "MT", "hlsget_downloads", "MySQL table.")
 
 	flag.Parse()
 
@@ -193,58 +169,43 @@ func main() {
 			os.Exit(1)
 		}else{
 			os.Stderr.Write([]byte(fmt.Sprintf("Loaded config from <%s> .\n", config)))
-			output = cfg.Output
-			path_rewrite = cfg.Path_Rewrite
-			segment_rewrite = cfg.Segment_Rewrite
-			if cfg.User_Agent != "" {
-				user_agent = cfg.User_Agent
-			}
-			log_file = cfg.Log_File
-			if cfg.Log_Level != "" {
-				log_level = cfg.Log_Level
-			}
-			retries = cfg.Retries
-			skip = cfg.Skip
-			mode = cfg.Mode
-			redirect = cfg.Redirect
-			concurrent = cfg.Concurrent
-			timeout = cfg.Timeout
-			total = cfg.Total
-			redis_host = cfg.Redis.Host
-			redis_port = cfg.Redis.Port
-			redis_db = cfg.Redis.Db
-			redis_password = cfg.Redis.Password
-			redis_key = cfg.Redis.Key
-			mysql_host = cfg.MySQL.Host
-			mysql_port = cfg.MySQL.Port
-			mysql_username = cfg.MySQL.Username
-			mysql_password = cfg.MySQL.Password
-			mysql_db = cfg.MySQL.Password
-			mysql_table = cfg.MySQL.Table
-			//os.Stderr.Write([]byte(fmt.Sprintf("Loaded config: %+v .\n", cfg)))
 		}
 	}
-	logging_config.Filename = log_file
-	logging_config.Level = log_level
-	if log_file != "" {
+	if cfg.User_Agent != "" {
+		cfg.User_Agent = "hls-get v" + VERSION
+	}
+	if cfg.Retries < 1 {
+		cfg.Retries = 1
+	}
+	if cfg.Concurrent < 1 {
+		cfg.Concurrent = 5
+	}
+
+	if checkConfig {
+		os.Stderr.Write([]byte("Current Config: \n\n"))
+		toml.NewEncoder(os.Stderr).Encode(cfg)
+		os.Exit(0)
+	}
+
+	if logging_config.Filename != "" {
 		logging.InitializeLogging(&logging_config, false, logging_config.Level)
 	}else{
 		logging.InitializeLogging(&logging_config, true, logging_config.Level)
 	}
 	defer logging.DeinitializeLogging()
-	path_rewriter := NewPathRewriter(path_rewrite)
-	segment_rewriter := NewSegmentRewriter(segment_rewrite)
+	path_rewriter := NewPathRewriter(cfg.Path_Rewrite)
+	segment_rewriter := NewSegmentRewriter(cfg.Segment_Rewrite)
 	var dl_interface DL_Interface
 	var loop bool
-	if mode == "mysql" {
+	if cfg.Mode == "mysql" {
 		// Fetch list from MySQL.
 		log.Infoln("Using mysql as task dispatcher...")
-		dl_interface = NewMySQLDl(mysql_host, uint(mysql_port), mysql_db, mysql_table, mysql_username, mysql_password)
+		dl_interface = NewMySQLDl(cfg.MySQL.Host, uint(cfg.MySQL.Port), cfg.MySQL.Db, cfg.MySQL.Table, cfg.MySQL.Username, cfg.MySQL.Password)
 		loop = true
-	}else if mode == "redis" {
+	}else if cfg.Mode == "redis" {
 		// Fetch list from Redis.
 		log.Infoln("Using redis as task dispatcher...")
-		dl_interface = NewRedisDl(redis_host, uint(redis_port), redis_password, redis_db, redis_key)
+		dl_interface = NewRedisDl(cfg.Redis.Host, uint(cfg.Redis.Port), cfg.Redis.Password, cfg.Redis.Db, cfg.Redis.Key)
 		loop = true
 	}else if flag.NArg() > 0 {
 		// Fetch list from Args.
@@ -255,7 +216,8 @@ func main() {
 		os.Stderr.Write([]byte("\n"))
 		return
 	}
-	hlsgetter := NewHLSGetter(dl_interface, output, path_rewriter, segment_rewriter, retries, timeout, skip, redirect, concurrent, total)
-	hlsgetter.SetUA(user_agent)
+	hlsgetter := NewHLSGetter(dl_interface, cfg.Output, path_rewriter, segment_rewriter, cfg.Retries,
+		cfg.Timeout, cfg.Skip, cfg.Redirect, cfg.Concurrent, cfg.Total)
+	hlsgetter.SetUA(cfg.User_Agent)
 	hlsgetter.Run(loop)
 }

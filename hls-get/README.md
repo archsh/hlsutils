@@ -14,7 +14,7 @@
 ### Options:
 - `c` string
       Use a config file instead of the following parameters. Default empty.
-- `C` int
+- `CO` int
       Concurrent tasks. (default 5)
 - `L` string
       Logging output file. Default 'stdout'.
