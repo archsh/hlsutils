@@ -170,8 +170,15 @@ func main() {
 	//MU 'mysql_url'      - [STRING] ${mysql_username}:${mysql_password}@${mysql_host}:${mysql_port}/${mysql_db}/${mysql_table}
 	//var mysql_url string
 	//flag.StringVar(&mysql_url, "MU", "", "${mysql_username}:${mysql_password}@${mysql_host}:${mysql_port}/${mysql_db}/${mysql_table}")
+	var showVersion bool
+	flag.BoolVar(&showVersion, "v", false, "Display version info.")
 
 	flag.Parse()
+
+	if showVersion {
+		os.Stderr.Write([]byte(fmt.Sprintf("hls-get v%v\n", VERSION)))
+		os.Exit(0)
+	}
 
 	os.Stderr.Write([]byte(fmt.Sprintf("hls-get v%v - HTTP Live Streaming (HLS) Downloader.\n", VERSION)))
 	os.Stderr.Write([]byte("Copyright (C) 2015 Mingcai SHEN <archsh@gmail.com>. Licensed for use under the GNU GPL version 3.\n"))
