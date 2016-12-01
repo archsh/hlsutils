@@ -25,7 +25,7 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-const VERSION = "0.9.14"
+const VERSION = "0.9.15"
 
 var logging_config = logging.LoggingConfig{Format:logging.DEFAULT_FORMAT, Level:"INFO"}
 
@@ -55,6 +55,7 @@ type Configuration struct {
 	Log_Level       string
 	Retries         int
 	Skip            bool
+	Skip_On_Size    bool
 	Mode            string
 	Redirect        string
 	Concurrent      int
@@ -114,6 +115,8 @@ func main() {
 	flag.IntVar(&cfg.Retries, "R", 0, "Retry times if download fails.")
 	//S  'skip'  - [BOOL] Skip if exists.
 	flag.BoolVar(&cfg.Skip, "S", false, "Skip if exists.")
+	//SZ 'skip_on_size' - [BOOL] Skip if size different.
+	flag.BoolVar(&cfg.Skip_On_Size, "SZ", false, "Skip if size different.")
 	//M  'mode'  - [STRING] Source mode: redis, mysql. Default empty means source via command args.
 	flag.StringVar(&cfg.Mode, "M", "", "Source mode: redis, mysql. Empty means source via command args.")
 	//RD 'redirect'   - [STRING] Redirect server request.
@@ -180,6 +183,9 @@ func main() {
 	if cfg.Concurrent < 1 {
 		cfg.Concurrent = 5
 	}
+	if cfg.Skip_On_Size {
+		cfg.Skip = cfg.Skip_On_Size
+	}
 
 	if checkConfig {
 		os.Stderr.Write([]byte("Current Config: \n\n"))
@@ -217,7 +223,7 @@ func main() {
 		return
 	}
 	hlsgetter := NewHLSGetter(dl_interface, cfg.Output, path_rewriter, segment_rewriter, cfg.Retries,
-		cfg.Timeout, cfg.Skip, cfg.Redirect, cfg.Concurrent, cfg.Total)
+		cfg.Timeout, cfg.Skip, cfg.Skip_On_Size, cfg.Redirect, cfg.Concurrent, cfg.Total)
 	hlsgetter.SetUA(cfg.User_Agent)
 	hlsgetter.Run(loop)
 }

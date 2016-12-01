@@ -38,6 +38,7 @@ type HLSGetter struct {
 	_retries int
 	_timeout int
 	_skip_exists bool
+	_skip_on_size bool
 	_user_agent string
 	_concurrent int
 	_redirect_url string
@@ -46,7 +47,7 @@ type HLSGetter struct {
 
 func NewHLSGetter(dl_intf DL_Interface, output string,
                   path_rewriter StringRewriter, segment_rewriter StringRewriter,
-                  retries int, timeout int, skip_exists bool, redirect string, concurrent int, total int64) *HLSGetter {
+                  retries int, timeout int, skip_exists bool, skip_on_size bool, redirect string, concurrent int, total int64) *HLSGetter {
 	hls := new(HLSGetter)
 	hls._client = &http.Client{Timeout: time.Duration(timeout)*time.Second}
 	hls._dl_intf = dl_intf
@@ -57,6 +58,7 @@ func NewHLSGetter(dl_intf DL_Interface, output string,
 	hls._retries = retries
 	hls._timeout = timeout
 	hls._skip_exists = skip_exists
+	hls._skip_on_size = skip_on_size
 	hls._concurrent = concurrent
 	hls._user_agent = "hls-get v"+VERSION
 	hls._total = total
@@ -151,10 +153,19 @@ func (self *HLSGetter) doRequest(req *http.Request) (*http.Response, error) {
 	return resp, err
 }
 
-func (self *HLSGetter) GetSegment(url string, filename string, skip_exists bool, retries int) (string, error) {
-	if skip_exists && exists(filename) {
-		log.Infoln("Segment exists: ", filename)
-		return filename, nil
+func (self *HLSGetter) GetSegment(url string, filename string, skip_exists bool, skip_on_size bool, retries int) (string, error) {
+	if skip_exists && exists(filename, 100) {
+		if skip_on_size {
+			if req, err := http.NewRequest("HEAD", url, nil); nil == err {
+				if resp, err := self.doRequest(req); nil == err && resp.StatusCode == 200 && exists(filename, resp.ContentLength){
+					log.Infof("Segment file '%s' exists with size %d bytes.\n", filename, resp.ContentLength)
+					return filename, nil
+				}
+			}
+		}else{
+			log.Infof("Segment file '%s' exists.\n", filename)
+			return filename, nil
+		}
 	}
 	if retries < 1 {
 		retries = 1
@@ -331,7 +342,7 @@ func (self *HLSGetter) Download(urlStr string, outDir string, filename string, c
 		for _, seg := range segs {
 			//log.Debugln(">>> Seg:", seg.URI)
 			go func (ps *Download) {
-				s, e := self.GetSegment(ps.URI, ps.Filename, self._skip_exists, self._retries)
+				s, e := self.GetSegment(ps.URI, ps.Filename, self._skip_exists, self._skip_on_size, self._retries)
 				if e != nil {
 					failures += 1
 					log.Errorln("Download Segment failed:", ps.URI, e)
