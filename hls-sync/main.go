@@ -26,7 +26,7 @@ import (
 	"time"
 )
 
-const VERSION = "0.9.7-dev"
+const VERSION = "0.9.8"
 
 var logging_config = logging.LoggingConfig{Format:logging.DEFAULT_FORMAT, Level:"DEBUG"}
 
