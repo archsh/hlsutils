@@ -236,7 +236,7 @@ func (self *Synchronizer) generateFilename(output string, format string, tm time
 		s = re.ReplaceAllString(s, "%${3}d")
 		s = fmt.Sprintf(s, idx)
 	}
-	return s, nil
+	return filepath.Join(output, s), nil
 }
 
 func exists(path string) bool {
