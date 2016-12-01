@@ -18,6 +18,8 @@
       Concurrent tasks. (default 5)
 - `L` string
       Logging output file. Default 'stdout'.
+- `V` string
+      Logging level. Default 'INFO'.
 - `M` string
       Source mode: redis, mysql. Empty means source via command args.
 - `MD` string

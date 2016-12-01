@@ -25,7 +25,7 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-const VERSION = "0.9.12"
+const VERSION = "0.9.13"
 
 var logging_config = logging.LoggingConfig{Format:logging.DEFAULT_FORMAT, Level:"DEBUG"}
 
@@ -103,9 +103,9 @@ func main() {
 	//L  'log'   - [STRING] Logging output file. Default 'stdout'.
 	var log_file string
 	flag.StringVar(&log_file, "L", "", "Logging output file. Default 'stdout'.")
-	//LV 'loglevel' - [STRING] Log level. Default 'INFO'.
+	//V 'loglevel' - [STRING] Log level. Default 'INFO'.
 	var log_level string
-	flag.StringVar(&log_level, "LV", "INFO", "Logging level. Default 'INFO'.")
+	flag.StringVar(&log_level, "V", "INFO", "Logging level. Default 'INFO'.")
 	//R  'retry' - [INTEGER] Retry times if download fails.
 	var retries int
 	flag.IntVar(&retries, "R", 0, "Retry times if download fails.")

@@ -152,7 +152,6 @@ func (self *HLSGetter) doRequest(req *http.Request) (*http.Response, error) {
 }
 
 func (self *HLSGetter) GetSegment(url string, filename string, skip_exists bool, retries int) (string, error) {
-	var out *os.File
 	if skip_exists && exists(filename) {
 		log.Infoln("Segment exists: ", filename)
 		return filename, nil
@@ -166,31 +165,6 @@ func (self *HLSGetter) GetSegment(url string, filename string, skip_exists bool,
 			log.Errorf("GetSegment:1> Create new request failed: %v\n", err)
 			return filename, err
 		}
-
-		if "" != filename {
-			err = os.MkdirAll(filepath.Dir(filename), 0777)
-			if err != nil {
-				log.Errorf("GetSegment:2> Create path %s failed :%v\n", filepath.Dir(filename), err)
-				return filename, err
-			}
-			out, err = os.Create(filename)
-		} else {
-			out, err = ioutil.TempFile("./", "__savedTempSegment")
-		}
-		if err != nil {
-			log.Errorf("GetSegment:3> Create file %s failed: %v\n", filename, err)
-			return filename, err
-		}
-		defer func() {
-			if "" != filename {
-				out.Close()
-			} else {
-				fname := out.Name()
-				out.Close()
-				os.Remove(fname)
-			}
-		}()
-
 		resp, err := self.doRequest(req)
 		if err != nil {
 			log.Errorf("GetSegment:4> do request failed: %v\n", err)
@@ -202,17 +176,37 @@ func (self *HLSGetter) GetSegment(url string, filename string, skip_exists bool,
 			time.Sleep(time.Duration(1) * time.Second)
 			continue
 		}
-		_, err = io.Copy(out, resp.Body)
+		respBody, err := ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
 		if err != nil {
 			log.Errorf("GetSegment:5> Copy response body failed: %v\n", err)
 			time.Sleep(time.Duration(1) * time.Second)
 			continue
 		}
-		resp.Body.Close()
-		log.Debugf("Downloaded %v into %v\n", url, filename)
+		if "" != filename {
+			err = os.MkdirAll(filepath.Dir(filename), 0777)
+			if err != nil {
+				log.Errorf("GetSegment:2> Create path %s failed :%v\n", filepath.Dir(filename), err)
+				return filename, err
+			}
+		} else {
+			//out, err = ioutil.TempFile("./", "__savedTempSegment")
+			return filename, errors.New("Filename empty!!!")
+		}
+		out, err := os.Create(filename)
+		defer out.Close()
+		if err != nil {
+			log.Errorf("Create file '%s' failed: %v\n", filename, err)
+			return filename, err
+		}
+		if n, err := out.Write(respBody); nil != err {
+			log.Errorf("Write segment file '%s' failed:> %s \n", filename, err)
+			return filename, err
+		}else{
+			log.Infof("Write segment file '%s' %d bytes.", filename, n)
+		}
 		return filename, nil
 	}
-
 	return "", errors.New("Failed to download segment!")
 }
 
@@ -296,7 +290,12 @@ func (self *HLSGetter) GetPlaylist(urlStr string, outDir string, filename string
 			defer out.Close()
 			new_mpl.Close()
 			buf := new_mpl.Encode()
-			io.Copy(out, buf)
+			if n, e := io.Copy(out, buf); nil != e {
+				log.Errorf("Write playlist '%s' failed: %s \n", playlistFilename, e)
+				return nil, "", -1, "Failed to write playlist."
+			}else{
+				log.Infof("Write playlist '%s' %d bytes.\n", playlistFilename, n)
+			}
 			//dest = playlistFilename
 			return segments, playlistFilename, 0, ""
 		} else {
