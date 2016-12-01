@@ -160,7 +160,7 @@ func (self *Synchronizer) playlistProc(segmentChan chan *SegmentMessage) {
 						}
 						cache.Add(v.URI, v.ProgramDateTime)
 						last_new_segment = time.Now()
-						log.Infoln("New segment:> ", mpl.SeqNo, v.URI, v.Duration, v.SeqId, v.ProgramDateTime)
+						log.Infof("New segment:> %d | %s | %f | %s \n", mpl.SeqNo, v.URI, v.Duration, v.ProgramDateTime)
 						if self.option.Sync.Enabled || self.option.Record.Enabled {
 							// Only get segments when sync or record enabled.
 							msg := &SegmentMessage{}

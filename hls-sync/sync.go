@@ -37,6 +37,8 @@ func (self *Synchronizer) syncProc(msgChan chan *SyncMessage) {
 			err := os.Remove(fname)
 			if err != nil {
 				log.Errorf("Delete file '%s' failed:> %s \n", fname, err)
+			}else{
+				log.Infof("Removed synced segment:> %s \n", fname)
 			}
 		}
 	}
@@ -60,6 +62,7 @@ func (self *Synchronizer) syncProc(msgChan chan *SyncMessage) {
 				log.Errorf("Write playlist '%s' failed:> %s \n", filename, e)
 			}
 			out.Close()
+			log.Infof("Synced playlist:> %s \n", filename)
 		case SEGMEMT:
 			log.Debugln("Syncing segment:> ", msg.segment.URI, msg.seg_buffer.Len())
 			filename := filepath.Join(self.option.Sync.Output, msg.segment.URI)
@@ -76,6 +79,7 @@ func (self *Synchronizer) syncProc(msgChan chan *SyncMessage) {
 			}
 			cache.Add(msg.segment.URI, filename)
 			out.Close()
+			log.Infof("Synced segment:> %s | %f | %s | %s \n", msg.segment.URI, msg.segment.Duration, msg.segment.ProgramDateTime, filename)
 		}
 	}
 }
