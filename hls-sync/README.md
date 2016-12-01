@@ -17,7 +17,7 @@ You can run with several URL as failover mechanism. `hls-sync` the first one and
 #### Control Options
   - `c` string
         Configuration file instead of command line parameters. Default empty means using parameters.
-  - `C `   
+  - `C ` 
         Check options.
   - `v` 
         Show version info.
@@ -122,6 +122,8 @@ timestamp_format=""
 timezone_shift=0
 target_duration=5
 program_time_format=""
+program_timezone="UTC"
+
 [source]
 urls=["http://live1.example.com/chan01/live.m3u8"]
 
@@ -143,5 +145,8 @@ enabled=true
 listen="unix://./hlssync.sock"
 days=7
 max=4
+segment_prefix=""
+cache_num=128
+cache_valid=60
 ```
 
